@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "freevectoricons": {
+      "command": "npx",
+      "args": ["-y", "@freevectoricons/mcp"],
+      "env": {
+        "FVI_API_URL": "https://freevectoricons.com/api",
+        "FVI_COLLECTION_ID": "<collection-id>",
+        "FVI_TOKEN": "<collection-token>"
+      }
+    }
+  }
+}

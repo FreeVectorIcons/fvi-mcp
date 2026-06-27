@@ -1,0 +1,50 @@
+{
+  "name": "@freevectoricons/mcp",
+  "version": "0.1.2",
+  "description": "MCP server for FreeVectorIcons design collections",
+  "author": "Hemanta Sapkota <hemanta@freevectoricons.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FreeVectorIcons/fvi-mcp.git"
+  },
+  "homepage": "https://freevectoricons.com/mcp",
+  "bugs": {
+    "url": "https://github.com/FreeVectorIcons/fvi-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "freevectoricons",
+    "svg",
+    "icons",
+    "cursor"
+  ],
+  "type": "module",
+  "bin": {
+    "fvi-mcp": "./dist/mcp-server.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node ./build.mjs",
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "esbuild": "0.27.3",
+    "typescript": "~5.9.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
