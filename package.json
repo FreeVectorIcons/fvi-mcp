@@ -1,7 +1,7 @@
 {
   "name": "@freevectoricons/mcp",
-  "version": "0.1.2",
-  "description": "MCP server for FreeVectorIcons design collections",
+  "version": "0.2.0-beta.0",
+  "description": "Beta MCP server for FreeVectorIcons design collections",
   "author": "Hemanta Sapkota <hemanta@freevectoricons.com>",
   "license": "MIT",
   "repository": {
