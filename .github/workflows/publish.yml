@@ -94,4 +94,6 @@ jobs:
           fi
 
       - name: Publish
-        run: npm publish --access public --provenance
+        # Prerelease versions (e.g. 0.2.0-beta.1) require an explicit tag.
+        # Keep latest while the package is still beta so npx @freevectoricons/mcp picks it up.
+        run: npm publish --access public --provenance --tag latest
