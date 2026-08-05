@@ -68,7 +68,7 @@ function withDrlMetadata(input: {
 
 const server = new McpServer({
   name: "freevectoricons",
-  version: "0.2.0-beta.0",
+  version: "0.2.0-beta.1",
 });
 
 logger.info("server.start", {

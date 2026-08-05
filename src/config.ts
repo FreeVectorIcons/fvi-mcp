@@ -24,5 +24,5 @@ export const config = {
   logLevel: (process.env.FVI_LOG_LEVEL || "info").trim().toLowerCase(),
   maxSearchQueryLength: 200,
   maxAssetIdLength: 128,
-  maxUploadBytes: 10 * 1024 * 1024,
+  maxUploadBytes: 50 * 1024 * 1024,
 } as const;

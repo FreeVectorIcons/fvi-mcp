@@ -132,6 +132,7 @@ node dist/mcp-server.mjs
 ```bash
 npm install
 npm run build
+npm run smoke
 node dist/mcp-server.mjs
 ```
 
@@ -143,8 +144,23 @@ To run from a local checkout:
 
 Build first (`npm run build`). The bundled entry is `dist/mcp-server.mjs`.
 
+### Packaging
+
+Runtime libraries (`@modelcontextprotocol/sdk`, `zod`) are **build-time only**. esbuild inlines them into `dist/mcp-server.mjs`, and published `dependencies` stays empty so `npx` does not install a second unused tree. Add new libraries as `devDependencies`, rebuild, and run `npm run smoke` before publish.
+
+Maintainers still scan build inputs:
+
+```bash
+npm run audit:consumer    # install graph consumers see (must stay clean at moderate+)
+npm run audit:maintainer  # includes devDependencies (high+)
+```
+
+After bumping a build dependency, rebuild and republish so `dist/` picks up the fix. See [Keeping @freevectoricons/mcp vulnerability-free](https://freevectoricons.com/blog/mcp-supply-chain-hardening).
+
 ## Related
 
+- [@freevectoricons/mcp package architecture](https://freevectoricons.com/blog/freevectoricons-mcp-package-architecture) — Solution Design Architecture (stdio transport, tool mapping, security boundary)
+- [Keeping @freevectoricons/mcp vulnerability-free](https://freevectoricons.com/blog/mcp-supply-chain-hardening) — empty published dependencies, audit gates, Dependabot
 - [freevectoricons.com/mcp](https://freevectoricons.com/mcp) — product documentation
 - [ai-icon-generator](https://github.com/FreeVectorIcons/ai-icon-generator) — open pipeline for catalog icons
 
