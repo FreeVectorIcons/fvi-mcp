@@ -38,10 +38,10 @@
   "dependencies": {},
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "@types/node": "^25.3.3",
+    "@types/node": "^26.1.2",
     "esbuild": "0.28.1",
-    "typescript": "~5.9.2",
-    "zod": "^3.25.76"
+    "typescript": "~7.0.2",
+    "zod": "^4.4.3"
   },
   "engines": {
     "node": ">=20"
