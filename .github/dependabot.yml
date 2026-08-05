@@ -8,6 +8,17 @@ updates:
     groups:
       build-dependencies:
         dependency-type: development
+        # Keep majors out of the weekly group — Zod 4 / TypeScript 6+ need intentional migrations.
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zod"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     labels:
       - dependencies
 
