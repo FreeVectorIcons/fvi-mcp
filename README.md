@@ -178,7 +178,7 @@ Releases are published from GitHub Actions on this repository — not from lapto
 2. Confirm the GitHub Environment `npm-publish` exists (branch/tag policy: `main`, `v*`).
 3. No long-lived npm automation token is required in GitHub secrets when trusted publishing is configured.
 
-The workflow runs typecheck, build, smoke, audits, refuses to republish an existing version, then `npm publish --access public --provenance`.
+The workflow runs typecheck, build, smoke, audits, refuses to republish an existing version, then `npm publish --access public --provenance --tag latest` (an explicit tag is required for prerelease versions such as `0.2.0-beta.1`).
 
 ## Related
 
