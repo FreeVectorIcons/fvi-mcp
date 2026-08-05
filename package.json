@@ -1,6 +1,6 @@
 {
   "name": "@freevectoricons/mcp",
-  "version": "0.2.0-beta.0",
+  "version": "0.2.0-beta.1",
   "description": "Beta MCP server for FreeVectorIcons design collections",
   "author": "Hemanta Sapkota <hemanta@freevectoricons.com>",
   "license": "MIT",
@@ -29,17 +29,19 @@
   ],
   "scripts": {
     "build": "node ./build.mjs",
-    "prepublishOnly": "pnpm run build",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "prepublishOnly": "node ./build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "node ./scripts/smoke.mjs",
+    "audit:consumer": "npm audit --omit=dev --audit-level=moderate",
+    "audit:maintainer": "npm audit --audit-level=high"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^3.25.76"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/node": "^25.3.3",
-    "esbuild": "0.27.3",
-    "typescript": "~5.9.2"
+    "esbuild": "0.28.1",
+    "typescript": "~5.9.2",
+    "zod": "^3.25.76"
   },
   "engines": {
     "node": ">=20"
