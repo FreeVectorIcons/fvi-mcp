@@ -20,6 +20,17 @@ This server exposes that collection to MCP clients. Agents search and retrieve c
 - A FreeVectorIcons account
 - A collection-scoped MCP token
 
+## Cursor Marketplace (plugin)
+
+This repository is also a **Cursor Plugin** (`.cursor-plugin/plugin.json` + `mcp.json`).
+
+1. Install from Cursor Marketplace once listed, **or** copy this repo to `~/.cursor/plugins/local/freevectoricons` for local testing (copy files; avoid broken symlinks).
+2. Open **Plugins → Configure** and set **Collection token** (`FVI_TOKEN`) from FreeVectorIcons → Integrations → Setup MCP.
+3. Optional: `FVI_API_URL` (defaults to production), `FVI_READ_ONLY=true` to hide write tools.
+4. Collection id is **not** required — `@freevectoricons/mcp@0.2.0-beta.2+` resolves it via whoami.
+
+Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
+
 ## Setup
 
 1. Open a collection at [freevectoricons.com](https://freevectoricons.com).
