@@ -1,4 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="FreeVectorIcons">
-  <rect width="128" height="128" rx="28" fill="#1F5C3F"/>
-  <path fill="#F4EAD5" d="M36 78V50h12.5c10.2 0 16.6 5.2 16.6 14S58.7 78 48.5 78H36zm12.2-9.6c4.6 0 7.2-2.4 7.2-6.4s-2.6-6.4-7.2-6.4H47.2v12.8h1zM72 78V50h20.8v9H83.2v3.2h8.4v8.2H83.2V78H72z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="FVI">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2A7A52"/>
+      <stop offset="100%" stop-color="#163D2A"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <rect x="10" y="10" width="108" height="48" rx="20" fill="#ffffff" opacity="0.06"/>
+  <text
+    x="64"
+    y="82"
+    text-anchor="middle"
+    font-family="ui-rounded, 'SF Pro Rounded', 'Avenir Next', 'Segoe UI', system-ui, sans-serif"
+    font-size="54"
+    font-weight="800"
+    letter-spacing="0.04em"
+    fill="#F4EAD5"
+  >FVI</text>
 </svg>
