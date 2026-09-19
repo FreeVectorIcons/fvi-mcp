@@ -4,7 +4,7 @@
 
 Model Context Protocol (MCP) server for [FreeVectorIcons](https://freevectoricons.com) design collections.
 
-Connects Cursor, Claude Desktop, and other MCP clients to a single FreeVectorIcons collection: catalog icons, uploaded SVGs, strategy briefs, DESIGN.md, and related project files. Access is scoped to one collection token.
+Connects Cursor, Claude Desktop, and other MCP clients to a single FreeVectorIcons collection (token-derived binding — configure `FVI_TOKEN` only): catalog icons, uploaded SVGs, strategy briefs, DESIGN.md, and related project files. Access is scoped to one collection token.
 
 npm: [`@freevectoricons/mcp`](https://www.npmjs.com/package/@freevectoricons/mcp)
 
@@ -24,7 +24,7 @@ This server exposes that collection to MCP clients. Agents search and retrieve c
 
 1. Open a collection at [freevectoricons.com](https://freevectoricons.com).
 2. Go to **Integrations** → **Setup MCP**.
-3. Create a token and copy the collection ID and secret.
+3. Create a collection-scoped token and copy the secret. The collection id is derived from the token (no separate collection id env var required).
 
 Add the server to your MCP client configuration (for example `.cursor/mcp.json`):
 
@@ -36,7 +36,6 @@ Add the server to your MCP client configuration (for example `.cursor/mcp.json`)
       "args": ["-y", "@freevectoricons/mcp"],
       "env": {
         "FVI_API_URL": "https://freevectoricons.com/api",
-        "FVI_COLLECTION_ID": "<collection-id>",
         "FVI_TOKEN": "<collection-token>"
       }
     }
@@ -64,8 +63,8 @@ Edit `~/.config/Claude/claude_desktop_config.json` and add the same `mcpServers`
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `FVI_TOKEN` | yes | — | Collection-scoped MCP token |
-| `FVI_COLLECTION_ID` | yes | — | Collection ID |
+| `FVI_TOKEN` | yes | — | Collection-scoped MCP token (`fvi_col_*`). Collection binding is derived via `GET /api/mcp/whoami`. |
+| `FVI_COLLECTION_ID` | no | — | **Deprecated / override only.** If set and it disagrees with the token’s collection, the adapter fails closed (`COLLECTION_MISMATCH`). Prefer omitting it. |
 | `FVI_API_URL` | no | `https://freevectoricons.com/api` | API base URL (include `/api`) |
 | `FVI_READ_ONLY` | no | `false` | When `true`, write tools are not registered |
 | `FVI_TIMEOUT_MS` | no | `30000` | HTTP request timeout for API calls (milliseconds) |
@@ -124,7 +123,6 @@ For local API development against a running FVI API server:
 
 ```bash
 FVI_API_URL=http://localhost:5001/api \
-FVI_COLLECTION_ID=<collection-id> \
 FVI_TOKEN=<collection-token> \
 node dist/mcp-server.mjs
 ```
@@ -178,7 +176,7 @@ Releases are published from GitHub Actions on this repository — not from lapto
 2. Confirm the GitHub Environment `npm-publish` exists (branch/tag policy: `main`, `v*`).
 3. No long-lived npm automation token is required in GitHub secrets when trusted publishing is configured.
 
-The workflow runs typecheck, build, smoke, audits, refuses to republish an existing version, then `npm publish --access public --provenance --tag latest` (an explicit tag is required for prerelease versions such as `0.2.0-beta.1`).
+The workflow runs typecheck, build, smoke, audits, refuses to republish an existing version, then `npm publish --access public --provenance`.
 
 ## Related
 

@@ -12,9 +12,14 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   return fallback;
 }
 
+/**
+ * FVI_TOKEN is required. FVI_COLLECTION_ID is optional (deprecated override):
+ * collection id is resolved from the token via GET /mcp/whoami when omitted.
+ */
 export const config = {
   apiUrl: (process.env.FVI_API_URL || "https://freevectoricons.com/api").replace(/\/$/, ""),
-  collectionId: process.env.FVI_COLLECTION_ID,
+  /** Optional override / legacy. Prefer token-derived collection binding. */
+  collectionId: process.env.FVI_COLLECTION_ID?.trim() || undefined,
   token: process.env.FVI_TOKEN,
   readOnly: parseBoolean(process.env.FVI_READ_ONLY, false),
   timeoutMs: parsePositiveInt(process.env.FVI_TIMEOUT_MS, 30_000),
