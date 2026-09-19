@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { config } from "./config.js";
+import { collectionPath, resolveCollectionId } from "./collection-resolve.js";
 import { fviGet, fviPost, uploadBody } from "./http-client.js";
 import { logger } from "./logger.js";
 import {
@@ -24,11 +25,6 @@ const uploadContentTypes = [
   "application/pdf",
 ] as const;
 
-function requireEnv(value: string | undefined, name: string): string {
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
-
 function asTextContent(payload: JsonValue) {
   return {
     content: [
@@ -38,10 +34,6 @@ function asTextContent(payload: JsonValue) {
       },
     ],
   };
-}
-
-function collectionPath(path: string): string {
-  return `/mcp/collections/${encodeURIComponent(requireEnv(config.collectionId, "FVI_COLLECTION_ID"))}${path}`;
 }
 
 function contentBuffer(input: { contentType: string; textContent?: string; contentBase64?: string }) {
@@ -68,7 +60,7 @@ function withDrlMetadata(input: {
 
 const server = new McpServer({
   name: "freevectoricons",
-  version: "0.2.0-beta.1",
+  version: "0.2.0-beta.2",
 });
 
 logger.info("server.start", {
@@ -76,6 +68,15 @@ logger.info("server.start", {
   timeoutMs: config.timeoutMs,
   uploadTimeoutMs: config.uploadTimeoutMs,
   retryMax: config.retryMax,
+  hasCollectionIdEnv: Boolean(config.collectionId),
+});
+
+// Resolve collection from token (whoami). Fail closed if optional FVI_COLLECTION_ID mismatches.
+// Errors here are deferred to first tool use if whoami is unreachable at spawn.
+void resolveCollectionId().catch((error) => {
+  logger.warn("collection.resolve_deferred", {
+    message: error instanceof Error ? error.message : String(error),
+  });
 });
 
 server.registerTool(
@@ -85,7 +86,7 @@ server.registerTool(
     description: "Return metadata-first context for the configured FreeVectorIcons design collection.",
     inputSchema: {},
   },
-  async () => asTextContent(await fviGet(collectionPath("/context"), "get_design_collection_context") as JsonValue),
+  async () => asTextContent(await fviGet(await collectionPath("/context"), "get_design_collection_context") as JsonValue),
 );
 
 server.registerTool(
@@ -95,7 +96,7 @@ server.registerTool(
     description: "List metadata for assets in the configured design collection.",
     inputSchema: {},
   },
-  async () => asTextContent(await fviGet(collectionPath("/assets"), "list_design_collection_assets") as JsonValue),
+  async () => asTextContent(await fviGet(await collectionPath("/assets"), "list_design_collection_assets") as JsonValue),
 );
 
 server.registerTool(
@@ -111,7 +112,7 @@ server.registerTool(
     const validatedQuery = validateSearchQuery(query);
     const params = new URLSearchParams({ query: validatedQuery });
     return asTextContent(
-      await fviGet(`${collectionPath("/assets")}?${params.toString()}`, "search_design_collection_assets") as JsonValue,
+      await fviGet(`${await collectionPath("/assets")}?${params.toString()}`, "search_design_collection_assets") as JsonValue,
     );
   },
 );
@@ -128,7 +129,7 @@ server.registerTool(
   async ({ assetId }) => {
     const validatedAssetId = validateAssetId(assetId);
     return asTextContent(
-      await fviGet(collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`), "get_design_asset") as JsonValue,
+      await fviGet(await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`), "get_design_asset") as JsonValue,
     );
   },
 );
@@ -146,7 +147,7 @@ server.registerTool(
     const validatedAssetId = validateAssetId(assetId);
     return asTextContent(
       await fviGet(
-        collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/download-url`),
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/download-url`),
         "get_design_asset_download_url",
       ) as JsonValue,
     );
@@ -166,7 +167,7 @@ server.registerTool(
     const validatedAssetId = validateAssetId(assetId);
     return asTextContent(
       await fviGet(
-        collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/content`),
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/content`),
         "get_design_asset_content",
       ) as JsonValue,
     );
@@ -193,7 +194,7 @@ if (!config.readOnly) {
     },
     async ({ name, contentType, sizeBytes, checksumSha256, drlProjectId, drlAssetType, documentType, tags, metadata }) => {
       validateUploadSize(sizeBytes);
-      const response = await fviPost<JsonValue>(collectionPath("/assets/uploads"), {
+      const response = await fviPost<JsonValue>(await collectionPath("/assets/uploads"), {
         name,
         contentType,
         sizeBytes,
@@ -228,7 +229,7 @@ if (!config.readOnly) {
         asset: JsonRecord;
         collectionItemId: string;
         upload: { url: string; method: string; headers?: Record<string, string> };
-      }>(collectionPath("/assets/uploads"), {
+      }>(await collectionPath("/assets/uploads"), {
         name: input.name,
         contentType: input.contentType,
         sizeBytes: body.byteLength,
@@ -276,7 +277,7 @@ if (!config.readOnly) {
         asset: JsonRecord;
         version: JsonRecord;
         upload: { url: string; method: string; headers?: Record<string, string> };
-      }>(collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/versions`), {
+      }>(await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/versions`), {
         ...(input.name ? { name: input.name } : {}),
         contentType: input.contentType,
         sizeBytes: body.byteLength,
