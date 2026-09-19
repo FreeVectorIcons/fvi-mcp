@@ -1,0 +1,38 @@
+{
+  "name": "freevectoricons",
+  "version": "0.1.0",
+  "description": "Connect Cursor and Grok agents to a FreeVectorIcons design collection — context, assets, downloads, and optional uploads via @freevectoricons/mcp.",
+  "author": {
+    "name": "FreeVectorIcons",
+    "email": "hemanta@freevectoricons.com"
+  },
+  "homepage": "https://freevectoricons.com/mcp",
+  "repository": "https://github.com/FreeVectorIcons/fvi-mcp",
+  "license": "MIT",
+  "keywords": ["mcp", "icons", "svg", "design", "collections", "agents"],
+  "logo": "assets/logo.svg",
+  "variables": {
+    "type": "object",
+    "properties": {
+      "FVI_TOKEN": {
+        "type": "string",
+        "title": "Collection token",
+        "description": "Collection-scoped bearer token from FreeVectorIcons → Collections → Integrations → Setup MCP. The collection is derived from this token. Never commit this value."
+      },
+      "FVI_API_URL": {
+        "type": "string",
+        "title": "API base URL",
+        "description": "API origin including /api. Leave default for production.",
+        "default": "https://freevectoricons.com/api"
+      },
+      "FVI_READ_ONLY": {
+        "type": "string",
+        "title": "Read only",
+        "description": "Set true to hide write tools (park/upload/version).",
+        "enum": ["true", "false"],
+        "default": "false"
+      }
+    },
+    "required": ["FVI_TOKEN"]
+  }
+}
