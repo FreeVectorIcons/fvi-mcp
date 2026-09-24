@@ -4,7 +4,7 @@ import { logger } from "./logger.js";
 type JsonRecord = { [key: string]: unknown };
 
 type FviRequestOptions = {
-  method?: "GET" | "POST" | "PUT";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: JsonRecord | Uint8Array | Buffer;
   headers?: Record<string, string>;
   timeoutMs?: number;
@@ -159,6 +159,27 @@ export async function fviPost<T>(path: string, body: JsonRecord, label: string):
   return response.json() as Promise<T>;
 }
 
+
+export async function fviPut<T>(path: string, body: JsonRecord, label: string): Promise<T> {
+  const response = await fviRequest(path, {
+    method: "PUT",
+    body,
+    label,
+    retryPost: true,
+  });
+  return response.json() as Promise<T>;
+}
+
+export async function fviPatch<T>(path: string, body: JsonRecord, label: string): Promise<T> {
+  const response = await fviRequest(path, {
+    method: "PATCH",
+    body,
+    label,
+    retryPost: true,
+  });
+  return response.json() as Promise<T>;
+}
+
 export async function uploadBody(
   upload: {
     url: string;
@@ -243,4 +264,20 @@ function resolveUploadUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
   const origin = new URL(config.apiUrl).origin;
   return new URL(url, origin).toString();
+}
+
+export async function fviDelete<T>(path: string, label: string): Promise<T> {
+  const response = await fviRequest(path, {
+    method: "DELETE",
+    label,
+    retryPost: true,
+  });
+  if (response.status === 204) {
+    return { ok: true } as T;
+  }
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json() as Promise<T>;
+  }
+  return { ok: true, status: response.status } as T;
 }

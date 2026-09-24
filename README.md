@@ -97,6 +97,15 @@ Treat `FVI_TOKEN` like a password. It grants access to one collection.
 - Rotate tokens from the collection **Integrations** tab if a token may have been exposed.
 - Set `FVI_READ_ONLY=true` if an agent should only read from the collection, not upload.
 
+## Switching collections (token rebind)
+
+Restarting MCP servers alone does **not** rebind a shared stdio connector that still has an old `FVI_TOKEN`.
+
+1. Mint a token for the target collection in Setup MCP.
+2. Re-Add / Configure the connector env with the new `FVI_TOKEN` (uninstall + add if Configure is unavailable).
+3. Smoke `get_design_collection_context` and confirm `collection.id` / `name`.
+4. Use a second named server entry when two collections must stay connected in parallel.
+
 ## Tools
 
 ### Read (always available)
@@ -108,7 +117,8 @@ Treat `FVI_TOKEN` like a password. It grants access to one collection.
 | `search_design_collection_assets` | Search by name, tag, category, or style |
 | `get_design_asset` | One asset by ID |
 | `get_design_asset_content` | Inline UTF-8 for catalog SVGs, uploaded SVGs, Markdown |
-| `get_design_asset_download_url` | Short-lived URL for PNG, PDF, and other binaries |
+| `get_design_asset_download_url` | Short-lived URL for PNG, PDF, spreadsheets (XLS/XLSX), and other binaries |
+| `get_design_asset_spreadsheet_preview` | Size-capped first-sheet CSV/HTML preview for XLS/XLSX |
 
 ### Write (enabled by default)
 
@@ -117,8 +127,16 @@ Treat `FVI_TOKEN` like a password. It grants access to one collection.
 | `create_design_asset_upload` | Create asset record and signed upload target |
 | `park_design_asset` | Upload inline text or base64 into the collection |
 | `create_design_asset_version` | Upload a new version of an existing asset (prior versions retained) |
+| `update_design_collection_strategy_brief` | Replace `collection.metadata.strategyBrief` (native Strategy Brief tab) |
+| `promote_design_asset_to_strategy_brief` | Copy Markdown asset text into the native brief (does not delete the asset) |
+| `update_design_asset_transcription_status` | Patch `textLayer` / `transcription` metadata (no OCR) |
+| `update_design_asset` | Metadata-only PATCH: name, tags, documentType, DRL fields |
+| `delete_design_collection_asset` | Soft-unlink collection item only — does **not** hard-delete bytes |
+| `probe_design_asset_text_layer` | Best-effort PDF embedded text probe (API feature-flagged) |
 
-Uploaded assets keep version history in FreeVectorIcons. Agents should prefer `create_design_asset_version` when refining an existing design, and `park_design_asset` for new files. Agents should use metadata and download URLs for images and PDFs.
+Uploaded assets keep version history in FreeVectorIcons. Agents should prefer `create_design_asset_version` when refining an existing design, and `park_design_asset` for new files. Agents should use metadata and download URLs for images, PDFs, and spreadsheets (`.xls` / `.xlsx`) — workbook bytes are not dumped into MCP tool results. Use `get_design_asset_spreadsheet_preview` for a capped first-sheet look. For scanned PDFs, set transcription status after parking a Markdown sibling.
+
+Parked `STRATEGY_BRIEF.md` is a supporting document only — it does **not** fill the native Strategy Brief tab until you call `promote_design_asset_to_strategy_brief` or `update_design_collection_strategy_brief`.
 
 Optional write metadata: `drlProjectId`, `drlAssetType`, `documentType`, `tags`.
 
@@ -127,6 +145,8 @@ Optional write metadata: `drlProjectId`, `drlAssetType`, `documentType`, `tags`.
 - **Collection-scoped.** One token grants access to one collection, not the global icon catalog.
 - **Catalog quality.** Catalog SVGs are AI-generated and refined on a schedule; verify assets before production use.
 - **No design review.** The server moves files and metadata; it does not evaluate brand fit.
+- **OCR is best-effort.** `probe_design_asset_text_layer` detects embedded PDF text only when enabled on the API; handwritten/scanned pages often have no usable text layer. Failures set `transcription.status=failed` without deleting the asset.
+- **Soft unlink, not hard delete.** `delete_design_collection_asset` removes the collection membership only — storage bytes stay until a future hard-delete policy.
 
 ## Development
 
