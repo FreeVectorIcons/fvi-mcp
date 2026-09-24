@@ -3,7 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { config } from "./config.js";
 import { collectionPath, resolveCollectionId } from "./collection-resolve.js";
-import { fviGet, fviPost, uploadBody } from "./http-client.js";
+import { fviDelete, fviGet, fviPatch, fviPost, fviPut, uploadBody } from "./http-client.js";
 import { logger } from "./logger.js";
 import {
   validateAssetId,
@@ -23,6 +23,8 @@ const uploadContentTypes = [
   "image/icns",
   "text/markdown",
   "application/pdf",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ] as const;
 
 function asTextContent(payload: JsonValue) {
@@ -60,7 +62,7 @@ function withDrlMetadata(input: {
 
 const server = new McpServer({
   name: "freevectoricons",
-  version: "0.2.0-beta.2",
+  version: "0.2.0-beta.6",
 });
 
 logger.info("server.start", {
@@ -83,7 +85,7 @@ server.registerTool(
   "get_design_collection_context",
   {
     title: "Get Design Collection Context",
-    description: "Return metadata-first context for the configured FreeVectorIcons design collection.",
+    description: "Return metadata-first context for the configured FreeVectorIcons design collection. Adapts instructions for brand vs records (collectionPurpose) and exposes transcription status on documents.",
     inputSchema: {},
   },
   async () => asTextContent(await fviGet(await collectionPath("/context"), "get_design_collection_context") as JsonValue),
@@ -169,6 +171,30 @@ server.registerTool(
       await fviGet(
         await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/content`),
         "get_design_asset_content",
+      ) as JsonValue,
+    );
+  },
+);
+
+
+server.registerTool(
+  "get_design_asset_spreadsheet_preview",
+  {
+    title: "Get Design Asset Spreadsheet Preview",
+    description:
+      "Return a size-capped first-sheet CSV or HTML preview for an .xls/.xlsx asset. Never dumps the full workbook — download URL remains primary for complete files.",
+    inputSchema: {
+      assetId: z.string().min(1).describe("Spreadsheet asset id or collection item id."),
+      format: z.enum(["csv", "html"]).optional().describe("Preview format. Defaults to csv."),
+    },
+  },
+  async ({ assetId, format }) => {
+    const validatedAssetId = validateAssetId(assetId);
+    const query = format ? `?format=${encodeURIComponent(format)}` : "";
+    return asTextContent(
+      await fviGet(
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/spreadsheet-preview${query}`),
+        "get_design_asset_spreadsheet_preview",
       ) as JsonValue,
     );
   },
@@ -298,6 +324,174 @@ if (!config.readOnly) {
       });
     },
   );
+
+  server.registerTool(
+    "update_design_collection_strategy_brief",
+    {
+      title: "Update Design Collection Strategy Brief",
+      description:
+        "Replace collection.metadata.strategyBrief (the native Design Brief → Strategy Brief tab / MCP strategy.brief). Parked STRATEGY_BRIEF.md does NOT fill the native tab unless promoted. Mutates collection metadata and appends a revision.",
+      inputSchema: {
+        content: z.string().min(1).describe("Markdown strategy brief content to store as the canonical brief."),
+        mode: z.enum(["replace"]).optional().describe('Write mode. Only "replace" is supported in P0.'),
+      },
+    },
+    async ({ content, mode }) => {
+      const response = await fviPut<JsonValue>(
+        await collectionPath("/strategy-brief"),
+        {
+          content,
+          ...(mode ? { mode } : {}),
+        },
+        "update_design_collection_strategy_brief",
+      );
+      return asTextContent(response);
+    },
+  );
+
+  server.registerTool(
+    "promote_design_asset_to_strategy_brief",
+    {
+      title: "Promote Design Asset To Strategy Brief",
+      description:
+        "Copy an inline Markdown asset into collection.metadata.strategyBrief. Parked STRATEGY_BRIEF.md does NOT fill the native Strategy Brief tab unless promoted with this tool. Does not delete the source asset.",
+      inputSchema: {
+        assetId: z.string().min(1).describe("Markdown asset id or collection item id to promote."),
+      },
+    },
+    async ({ assetId }) => {
+      const validatedAssetId = validateAssetId(assetId);
+      const response = await fviPost<JsonValue>(
+        await collectionPath("/strategy-brief/promote"),
+        { assetId: validatedAssetId },
+        "promote_design_asset_to_strategy_brief",
+      );
+      return asTextContent(response);
+    },
+  );
+
+  server.registerTool(
+    "update_design_asset_transcription_status",
+    {
+      title: "Update Design Asset Transcription Status",
+      description:
+        "Update textLayer and/or transcription status metadata on a PDF (or other doc) asset. Park Markdown transcriptions as sibling assets and link via transcription.transcriptionAssetId. Does not run OCR.",
+      inputSchema: {
+        assetId: z.string().min(1).describe("Asset id or collection item id."),
+        textLayer: z
+          .enum(["none", "partial", "full", "unknown"])
+          .optional()
+          .describe("Detected text layer coverage on the source document."),
+        transcription: z
+          .object({
+            status: z.enum(["none", "pending", "ready", "failed"]).optional(),
+            confidence: z.number().min(0).max(1).optional(),
+            languageHints: z.array(z.string()).optional(),
+            source: z.enum(["agent", "ocr", "human"]).optional(),
+            transcriptionAssetId: z
+              .string()
+              .nullable()
+              .optional()
+              .describe("Sibling Markdown asset id containing the transcription."),
+          })
+          .optional()
+          .describe("Transcription status patch."),
+      },
+    },
+    async ({ assetId, textLayer, transcription }) => {
+      const validatedAssetId = validateAssetId(assetId);
+      const response = await fviPatch<JsonValue>(
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/transcription-status`),
+        {
+          ...(textLayer ? { textLayer } : {}),
+          ...(transcription ? { transcription } : {}),
+        },
+        "update_design_asset_transcription_status",
+      );
+      return asTextContent(response);
+    },
+  );
+
+  server.registerTool(
+    "update_design_asset",
+    {
+      title: "Update Design Asset",
+      description:
+        "Metadata-only PATCH for an uploaded collection asset: name, tags, documentType, drlProjectId, drlAssetType. Does not replace file bytes — use create_design_asset_version for content changes.",
+      inputSchema: {
+        assetId: z.string().min(1).describe("Asset id or collection item id."),
+        name: z.string().min(1).optional().describe("New display file name."),
+        tags: z.array(z.string()).optional().describe("Replace searchable tags."),
+        documentType: z
+          .string()
+          .nullable()
+          .optional()
+          .describe("Document role (brand or records vocabulary), or null to clear."),
+        drlProjectId: z.string().nullable().optional().describe("Optional DRL project id, or null to clear."),
+        drlAssetType: z.string().nullable().optional().describe("Optional DRL asset role, or null to clear."),
+      },
+    },
+    async ({ assetId, name, tags, documentType, drlProjectId, drlAssetType }) => {
+      const validatedAssetId = validateAssetId(assetId);
+      const response = await fviPatch<JsonValue>(
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`),
+        {
+          ...(name !== undefined ? { name } : {}),
+          ...(tags !== undefined ? { tags } : {}),
+          ...(documentType !== undefined ? { documentType } : {}),
+          ...(drlProjectId !== undefined ? { drlProjectId } : {}),
+          ...(drlAssetType !== undefined ? { drlAssetType } : {}),
+        },
+        "update_design_asset",
+      );
+      return asTextContent(response);
+    },
+  );
+
+  server.registerTool(
+    "delete_design_collection_asset",
+    {
+      title: "Delete Design Collection Asset (Soft Unlink)",
+      description:
+        "Soft-unlink a collection item only (same as session DELETE …/items/:itemId). Removes the item from the collection and clears assets.collection_id — does NOT hard-delete storage bytes. Prefer this over discard when decluttering a collection.",
+      inputSchema: {
+        assetId: z
+          .string()
+          .min(1)
+          .describe("Collection item id or uploaded asset id to unlink from the collection."),
+      },
+    },
+    async ({ assetId }) => {
+      const validatedAssetId = validateAssetId(assetId);
+      const response = await fviDelete<JsonValue>(
+        await collectionPath(`/items/${encodeURIComponent(validatedAssetId)}`),
+        "delete_design_collection_asset",
+      );
+      return asTextContent(response);
+    },
+  );
+
+  server.registerTool(
+    "probe_design_asset_text_layer",
+    {
+      title: "Probe Design Asset Text Layer",
+      description:
+        "Best-effort PDF embedded text-layer probe. Updates textLayer / transcription metadata when FVI_PDF_TEXT_LAYER_PROBE is enabled on the API. Handwritten/scanned quality is NOT guaranteed; failures set transcription.status=failed without deleting the asset. No paid OCR API key required.",
+      inputSchema: {
+        assetId: z.string().min(1).describe("PDF asset id or collection item id."),
+      },
+    },
+    async ({ assetId }) => {
+      const validatedAssetId = validateAssetId(assetId);
+      const response = await fviPost<JsonValue>(
+        await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/text-layer-probe`),
+        {},
+        "probe_design_asset_text_layer",
+      );
+      return asTextContent(response);
+    },
+  );
+
 } else {
   logger.info("server.read_only", {
     message: "Write tools are disabled. Set FVI_READ_ONLY=false to re-enable uploads.",
