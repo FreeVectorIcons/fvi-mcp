@@ -4,6 +4,11 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseList(value: string | undefined): string[] {
+  if (!value?.trim()) return [];
+  return value.split(",").map((part) => part.trim()).filter(Boolean);
+}
+
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined) return fallback;
   const normalized = value.trim().toLowerCase();
@@ -22,6 +27,11 @@ export const config = {
   collectionId: process.env.FVI_COLLECTION_ID?.trim() || undefined,
   token: process.env.FVI_TOKEN,
   readOnly: parseBoolean(process.env.FVI_READ_ONLY, false),
+  skipTokenCheck: parseBoolean(process.env.FVI_SKIP_TOKEN_CHECK, false),
+  /** Further narrows registered tools. Never widens token scopes. */
+  toolAllowlist: parseList(process.env.FVI_TOOLS),
+  allowFilePaths: parseBoolean(process.env.FVI_ALLOW_FILE_PATHS, false),
+  filePathRoots: parseList(process.env.FVI_FILE_PATH_ROOTS),
   timeoutMs: parsePositiveInt(process.env.FVI_TIMEOUT_MS, 30_000),
   uploadTimeoutMs: parsePositiveInt(process.env.FVI_UPLOAD_TIMEOUT_MS, 120_000),
   retryMax: parsePositiveInt(process.env.FVI_RETRY_MAX, 3),

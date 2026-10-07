@@ -2,10 +2,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { config } from "./config.js";
-import { collectionPath, resolveCollectionId } from "./collection-resolve.js";
+import { collectionPath, resolveWhoami } from "./collection-resolve.js";
 import { fviDelete, fviGet, fviPatch, fviPost, fviPut, uploadBody } from "./http-client.js";
 import { logger } from "./logger.js";
+import { classifyFviToken } from "./token-shape.js";
 import {
+  assertDecodedChecksum,
+  readOptInUploadFile,
   validateAssetId,
   validateSearchQuery,
   validateUploadSize,
@@ -44,6 +47,23 @@ function contentBuffer(input: { contentType: string; textContent?: string; conte
   return Buffer.from(input.contentBase64!, "base64");
 }
 
+async function preparedUploadBody(input: {
+  contentType: string;
+  textContent?: string;
+  contentBase64?: string;
+  filePath?: string;
+  checksumSha256?: string;
+}) {
+  if (input.filePath && (input.textContent || input.contentBase64)) {
+    throw new Error("Provide filePath or inline content, not both.");
+  }
+  const body = input.filePath ? await readOptInUploadFile(input.filePath) : contentBuffer(input);
+  const checksumSha256 = assertDecodedChecksum(body, input.checksumSha256);
+  return { body, checksumSha256 };
+}
+
+const BATCH_DOWNLOAD_LIMIT = 50;
+
 function withDrlMetadata(input: {
   metadata?: JsonRecord;
   drlProjectId?: string;
@@ -60,10 +80,73 @@ function withDrlMetadata(input: {
   };
 }
 
+const tokenProblem = classifyFviToken(config.token, config.skipTokenCheck);
+if (tokenProblem) {
+  logger.error("token.rejected", { code: tokenProblem.code, message: tokenProblem.message });
+  process.exit(1);
+}
+
 const server = new McpServer({
   name: "freevectoricons",
-  version: "0.2.0-beta.6",
+  version: "0.3.0-beta.1",
 });
+
+type RegisteredTool = ReturnType<typeof server.registerTool>;
+type ToolScope = "read" | "write:assets" | "write:collection" | "write:records" | "delete";
+
+const trackedTools: Array<{
+  name: string;
+  scope: ToolScope;
+  capability?: string;
+  tool: RegisteredTool;
+}> = [];
+
+function registerTrackedTool<InputArgs extends z.ZodRawShape>(
+  meta: { scope: ToolScope; capability?: string },
+  name: string,
+  configArgs: {
+    title: string;
+    description: string;
+    inputSchema?: InputArgs;
+  },
+  handler: (args: z.infer<z.ZodObject<InputArgs>>) => Promise<{ content: Array<{ type: "text"; text: string }> }>,
+) {
+  const tool = server.registerTool(name, configArgs as never, handler as never);
+  trackedTools.push({ name, scope: meta.scope, capability: meta.capability, tool });
+  return tool;
+}
+
+/** Gated by the mcp.records_tools flag. */
+const recordsTools: RegisteredTool[] = [];
+/** Gated by mcp.records_tools and collections.records. */
+const recordsDataTools: RegisteredTool[] = [];
+
+const FEATURE_FLAG_FETCH_TIMEOUT_MS = 3_000;
+
+/**
+ * Hides records tools the API would refuse anyway. Fails open: if the flag
+ * endpoint is unreachable every tool stays listed and the API remains the gate.
+ */
+async function applyFeatureFlags(): Promise<void> {
+  try {
+    const res = await fetch(`${config.apiUrl}/feature-flags`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(FEATURE_FLAG_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const body = (await res.json()) as { flags?: Record<string, unknown> };
+    const flags = body.flags ?? {};
+    const recordsToolsOn = flags["mcp.records_tools"] !== false;
+    const recordsDataOn = recordsToolsOn && flags["collections.records"] !== false;
+    if (!recordsToolsOn) recordsTools.forEach((tool) => tool.disable());
+    if (!recordsDataOn) recordsDataTools.forEach((tool) => tool.disable());
+    logger.info("feature_flags.applied", { recordsTools: recordsToolsOn, recordsData: recordsDataOn });
+  } catch (error) {
+    logger.warn("feature_flags.unavailable", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 logger.info("server.start", {
   readOnly: config.readOnly,
@@ -73,15 +156,8 @@ logger.info("server.start", {
   hasCollectionIdEnv: Boolean(config.collectionId),
 });
 
-// Resolve collection from token (whoami). Fail closed if optional FVI_COLLECTION_ID mismatches.
-// Errors here are deferred to first tool use if whoami is unreachable at spawn.
-void resolveCollectionId().catch((error) => {
-  logger.warn("collection.resolve_deferred", {
-    message: error instanceof Error ? error.message : String(error),
-  });
-});
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "get_design_collection_context",
   {
     title: "Get Design Collection Context",
@@ -91,7 +167,7 @@ server.registerTool(
   async () => asTextContent(await fviGet(await collectionPath("/context"), "get_design_collection_context") as JsonValue),
 );
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "list_design_collection_assets",
   {
     title: "List Design Collection Assets",
@@ -101,7 +177,7 @@ server.registerTool(
   async () => asTextContent(await fviGet(await collectionPath("/assets"), "list_design_collection_assets") as JsonValue),
 );
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "search_design_collection_assets",
   {
     title: "Search Design Collection Assets",
@@ -119,7 +195,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "get_design_asset",
   {
     title: "Get Design Asset",
@@ -136,7 +212,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "get_design_asset_download_url",
   {
     title: "Get Design Asset Download URL",
@@ -156,7 +232,7 @@ server.registerTool(
   },
 );
 
-server.registerTool(
+registerTrackedTool({ scope: "read" },
   "get_design_asset_content",
   {
     title: "Get Design Asset Content",
@@ -177,7 +253,7 @@ server.registerTool(
 );
 
 
-server.registerTool(
+const spreadsheetPreviewTool = registerTrackedTool({ scope: "read" },
   "get_design_asset_spreadsheet_preview",
   {
     title: "Get Design Asset Spreadsheet Preview",
@@ -201,7 +277,7 @@ server.registerTool(
 );
 
 if (!config.readOnly) {
-  server.registerTool(
+  registerTrackedTool({ scope: "write:assets" },
     "create_design_asset_upload",
     {
       title: "Create Design Asset Upload",
@@ -231,7 +307,7 @@ if (!config.readOnly) {
     },
   );
 
-  server.registerTool(
+  registerTrackedTool({ scope: "write:assets" },
     "park_design_asset",
     {
       title: "Park Design Asset",
@@ -241,7 +317,10 @@ if (!config.readOnly) {
         contentType: z.enum(uploadContentTypes).describe("MIME type for the uploaded asset."),
         textContent: z.string().optional().describe("UTF-8 text content for SVG, Markdown, or other text assets."),
         contentBase64: z.string().optional().describe("Base64-encoded binary content for image/PDF assets."),
-        checksumSha256: z.string().optional().describe("Optional SHA-256 checksum for provenance."),
+        checksumSha256: z.string().optional().describe("SHA-256 hex of the decoded bytes. Verified before upload."),
+        filePath: z.string().optional().describe("Local file path. Off unless FVI_ALLOW_FILE_PATHS=true."),
+        makeCanonicalDesignMd: z.boolean().optional().describe("Pin this Markdown file as the canonical DESIGN.md."),
+        dryRun: z.boolean().optional().describe("Validate only. Writes nothing."),
         drlProjectId: z.string().optional().describe("Optional DRL project identifier to store in metadata."),
         drlAssetType: z.string().optional().describe("Optional DRL asset role, e.g. logo, brief, source_art, mockup."),
         documentType: z.string().optional().describe("Optional document type for Markdown/PDF supporting documents."),
@@ -250,16 +329,20 @@ if (!config.readOnly) {
       },
     },
     async (input) => {
-      const body = contentBuffer(input);
+      const prepared = await preparedUploadBody(input);
       const uploadResponse = await fviPost<{
-        asset: JsonRecord;
-        collectionItemId: string;
-        upload: { url: string; method: string; headers?: Record<string, string> };
+        dryRun?: boolean;
+        asset?: JsonRecord;
+        collectionItemId?: string;
+        versionId?: string;
+        upload?: { url: string; method: string; headers?: Record<string, string> };
       }>(await collectionPath("/assets/uploads"), {
         name: input.name,
         contentType: input.contentType,
-        sizeBytes: body.byteLength,
-        ...(input.checksumSha256 ? { checksumSha256: input.checksumSha256 } : {}),
+        sizeBytes: prepared.body.byteLength,
+        checksumSha256: prepared.checksumSha256,
+        ...(input.makeCanonicalDesignMd ? { makeCanonicalDesignMd: true } : {}),
+        ...(input.dryRun ? { dryRun: true } : {}),
         metadata: withDrlMetadata({
           metadata: input.metadata as JsonRecord | undefined,
           drlProjectId: input.drlProjectId,
@@ -268,16 +351,21 @@ if (!config.readOnly) {
           tags: input.tags,
         }),
       }, "park_design_asset");
-      await uploadBody(uploadResponse.upload, body, "park_design_asset");
+      if (uploadResponse.dryRun || !uploadResponse.upload) return asTextContent(uploadResponse as JsonValue);
+      await uploadBody(uploadResponse.upload, prepared.body, "park_design_asset");
+      const completed = uploadResponse.versionId
+        ? await fviPost<JsonValue>(await collectionPath(`/uploads/${encodeURIComponent(uploadResponse.versionId)}/complete`), {}, "complete_design_asset_upload")
+        : null;
       return asTextContent({
-        asset: uploadResponse.asset,
-        collectionItemId: uploadResponse.collectionItemId,
+        asset: uploadResponse.asset ?? null,
+        collectionItemId: uploadResponse.collectionItemId ?? null,
         uploaded: true,
+        ...(completed ? { completed } : {}),
       });
     },
   );
 
-  server.registerTool(
+  registerTrackedTool({ scope: "write:assets" },
     "create_design_asset_version",
     {
       title: "Create Design Asset Version",
@@ -288,7 +376,10 @@ if (!config.readOnly) {
         contentType: z.enum(uploadContentTypes).describe("MIME type for the uploaded version."),
         textContent: z.string().optional().describe("UTF-8 text content for SVG, Markdown, or other text assets."),
         contentBase64: z.string().optional().describe("Base64-encoded binary content for image/PDF assets."),
-        checksumSha256: z.string().optional().describe("Optional SHA-256 checksum for provenance."),
+        checksumSha256: z.string().optional().describe("SHA-256 hex of the decoded bytes. Verified before upload."),
+        filePath: z.string().optional().describe("Local file path. Off unless FVI_ALLOW_FILE_PATHS=true."),
+        makeCanonicalDesignMd: z.boolean().optional().describe("Pin this Markdown file as the canonical DESIGN.md."),
+        dryRun: z.boolean().optional().describe("Validate only. Writes nothing."),
         drlProjectId: z.string().optional().describe("Optional DRL project identifier to store in metadata."),
         drlAssetType: z.string().optional().describe("Optional DRL asset role, e.g. revision, source_art, approved_art."),
         documentType: z.string().optional().describe("Optional document type for Markdown/PDF supporting documents."),
@@ -298,16 +389,20 @@ if (!config.readOnly) {
     },
     async (input) => {
       const validatedAssetId = validateAssetId(input.assetId);
-      const body = contentBuffer(input);
+      const prepared = await preparedUploadBody(input);
       const versionResponse = await fviPost<{
-        asset: JsonRecord;
-        version: JsonRecord;
-        upload: { url: string; method: string; headers?: Record<string, string> };
+        dryRun?: boolean;
+        asset?: JsonRecord;
+        version?: JsonRecord;
+        versionId?: string;
+        upload?: { url: string; method: string; headers?: Record<string, string> };
       }>(await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/versions`), {
         ...(input.name ? { name: input.name } : {}),
         contentType: input.contentType,
-        sizeBytes: body.byteLength,
-        ...(input.checksumSha256 ? { checksumSha256: input.checksumSha256 } : {}),
+        sizeBytes: prepared.body.byteLength,
+        checksumSha256: prepared.checksumSha256,
+        ...(input.makeCanonicalDesignMd ? { makeCanonicalDesignMd: true } : {}),
+        ...(input.dryRun ? { dryRun: true } : {}),
         metadata: withDrlMetadata({
           metadata: input.metadata as JsonRecord | undefined,
           drlProjectId: input.drlProjectId,
@@ -316,16 +411,21 @@ if (!config.readOnly) {
           tags: input.tags,
         }),
       }, "create_design_asset_version");
-      await uploadBody(versionResponse.upload, body, "create_design_asset_version");
+      if (versionResponse.dryRun || !versionResponse.upload) return asTextContent(versionResponse as JsonValue);
+      await uploadBody(versionResponse.upload, prepared.body, "create_design_asset_version");
+      const completed = versionResponse.versionId
+        ? await fviPost<JsonValue>(await collectionPath(`/uploads/${encodeURIComponent(versionResponse.versionId)}/complete`), {}, "complete_design_asset_upload")
+        : null;
       return asTextContent({
-        asset: versionResponse.asset,
-        version: versionResponse.version,
+        asset: versionResponse.asset ?? null,
+        version: versionResponse.version ?? null,
         uploaded: true,
+        ...(completed ? { completed } : {}),
       });
     },
   );
 
-  server.registerTool(
+  recordsTools.push(registerTrackedTool({ scope: "write:collection" },
     "update_design_collection_strategy_brief",
     {
       title: "Update Design Collection Strategy Brief",
@@ -347,9 +447,9 @@ if (!config.readOnly) {
       );
       return asTextContent(response);
     },
-  );
+  ));
 
-  server.registerTool(
+  recordsTools.push(registerTrackedTool({ scope: "write:collection" },
     "promote_design_asset_to_strategy_brief",
     {
       title: "Promote Design Asset To Strategy Brief",
@@ -368,9 +468,9 @@ if (!config.readOnly) {
       );
       return asTextContent(response);
     },
-  );
+  ));
 
-  server.registerTool(
+  recordsDataTools.push(registerTrackedTool({ scope: "write:records" },
     "update_design_asset_transcription_status",
     {
       title: "Update Design Asset Transcription Status",
@@ -410,9 +510,9 @@ if (!config.readOnly) {
       );
       return asTextContent(response);
     },
-  );
+  ));
 
-  server.registerTool(
+  registerTrackedTool({ scope: "write:assets" },
     "update_design_asset",
     {
       title: "Update Design Asset",
@@ -420,7 +520,16 @@ if (!config.readOnly) {
         "Metadata-only PATCH for an uploaded collection asset: name, tags, documentType, drlProjectId, drlAssetType. Does not replace file bytes — use create_design_asset_version for content changes.",
       inputSchema: {
         assetId: z.string().min(1).describe("Asset id or collection item id."),
-        name: z.string().min(1).optional().describe("New display file name."),
+        name: z.string().min(1).optional().describe("New display file name. The extension cannot change."),
+        metadata: z.object({
+          set: z.record(z.string()).optional().describe("Custom metadata keys to set."),
+          remove: z.array(z.string()).optional().describe("Custom metadata keys to remove."),
+        }).optional(),
+        links: z.array(z.object({
+          rel: z.enum(["source", "summary", "replaces", "transcription", "related"]),
+          assetId: z.string().nullable(),
+        })).optional().describe("Links to other assets in this collection. Null assetId clears a link."),
+        dryRun: z.boolean().optional(),
         tags: z.array(z.string()).optional().describe("Replace searchable tags."),
         documentType: z
           .string()
@@ -431,7 +540,7 @@ if (!config.readOnly) {
         drlAssetType: z.string().nullable().optional().describe("Optional DRL asset role, or null to clear."),
       },
     },
-    async ({ assetId, name, tags, documentType, drlProjectId, drlAssetType }) => {
+    async ({ assetId, name, tags, documentType, drlProjectId, drlAssetType, metadata, links, dryRun }) => {
       const validatedAssetId = validateAssetId(assetId);
       const response = await fviPatch<JsonValue>(
         await collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`),
@@ -441,6 +550,9 @@ if (!config.readOnly) {
           ...(documentType !== undefined ? { documentType } : {}),
           ...(drlProjectId !== undefined ? { drlProjectId } : {}),
           ...(drlAssetType !== undefined ? { drlAssetType } : {}),
+          ...(metadata !== undefined ? { metadata } : {}),
+          ...(links !== undefined ? { links } : {}),
+          ...(dryRun ? { dryRun: true } : {}),
         },
         "update_design_asset",
       );
@@ -448,7 +560,7 @@ if (!config.readOnly) {
     },
   );
 
-  server.registerTool(
+  recordsTools.push(registerTrackedTool({ scope: "delete" },
     "delete_design_collection_asset",
     {
       title: "Delete Design Collection Asset (Soft Unlink)",
@@ -469,9 +581,9 @@ if (!config.readOnly) {
       );
       return asTextContent(response);
     },
-  );
+  ));
 
-  server.registerTool(
+  recordsTools.push(registerTrackedTool({ scope: "write:records" },
     "probe_design_asset_text_layer",
     {
       title: "Probe Design Asset Text Layer",
@@ -490,6 +602,124 @@ if (!config.readOnly) {
       );
       return asTextContent(response);
     },
+  ));
+
+  registerTrackedTool({ scope: "write:collection", capability: "designMd" },
+    "set_collection_design_md",
+    {
+      title: "Set Collection DESIGN.md",
+      description: "Pin the collection's canonical DESIGN.md from inline Markdown or an existing Markdown asset. Lint does not block the save.",
+      inputSchema: {
+        content: z.string().optional().describe("Inline Markdown. Provide this or assetId."),
+        assetId: z.string().optional().describe("Existing Markdown asset to pin."),
+        dryRun: z.boolean().optional(),
+      },
+    },
+    async ({ content, assetId, dryRun }) => asTextContent(await fviPost(await collectionPath("/design-md"), {
+      ...(content !== undefined ? { content } : {}),
+      ...(assetId !== undefined ? { assetId } : {}),
+      ...(dryRun ? { dryRun: true } : {}),
+    }, "set_collection_design_md") as JsonValue),
+  );
+
+  registerTrackedTool({ scope: "write:collection", capability: "purpose" },
+    "update_design_collection_purpose",
+    {
+      title: "Update Design Collection Purpose",
+      description: "Set collection purpose to brand or records.",
+      inputSchema: {
+        purpose: z.enum(["brand", "records"]),
+        dryRun: z.boolean().optional(),
+      },
+    },
+    async ({ purpose, dryRun }) => asTextContent(await fviPut(await collectionPath("/purpose"), {
+      purpose,
+      ...(dryRun ? { dryRun: true } : {}),
+    }, "update_design_collection_purpose") as JsonValue),
+  );
+
+  registerTrackedTool({ scope: "write:assets", capability: "versionUpload" },
+    "create_design_asset_version_upload",
+    {
+      title: "Create Design Asset Version Upload",
+      description: "Start a new version of an existing asset with a signed upload. Call complete_design_asset_upload after the bytes are uploaded. The version stays hidden until then.",
+      inputSchema: {
+        assetId: z.string().min(1),
+        name: z.string().optional(),
+        contentType: z.enum(uploadContentTypes),
+        sizeBytes: z.number().int().positive(),
+        checksumSha256: z.string().optional().describe("SHA-256 hex of the file bytes."),
+        filePath: z.string().optional().describe("Local file to upload. Off unless FVI_ALLOW_FILE_PATHS=true."),
+        dryRun: z.boolean().optional(),
+      },
+    },
+    async (input) => {
+      const assetId = validateAssetId(input.assetId);
+      if (input.filePath) {
+        const bytes = await readOptInUploadFile(input.filePath);
+        const checksumSha256 = assertDecodedChecksum(bytes, input.checksumSha256);
+        const started = await fviPost<{
+          uploadId: string;
+          upload: { url: string; method: string; headers?: Record<string, string> };
+        }>(await collectionPath(`/assets/${encodeURIComponent(assetId)}/version-uploads`), {
+          ...(input.name ? { name: input.name } : {}),
+          contentType: input.contentType,
+          sizeBytes: bytes.byteLength,
+          checksumSha256,
+          ...(input.dryRun ? { dryRun: true } : {}),
+        }, "create_design_asset_version_upload");
+        if (input.dryRun || !started.upload) return asTextContent(started as JsonValue);
+        await uploadBody(started.upload, bytes, "create_design_asset_version_upload");
+        const completed = await fviPost(
+          await collectionPath(`/uploads/${encodeURIComponent(started.uploadId)}/complete`),
+          {},
+          "complete_design_asset_upload",
+        );
+        return asTextContent({ uploadId: started.uploadId, completed } as JsonValue);
+      }
+      validateUploadSize(input.sizeBytes);
+      return asTextContent(await fviPost(await collectionPath(`/assets/${encodeURIComponent(assetId)}/version-uploads`), {
+        ...(input.name ? { name: input.name } : {}),
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        ...(input.checksumSha256 ? { checksumSha256: input.checksumSha256 } : {}),
+        ...(input.dryRun ? { dryRun: true } : {}),
+      }, "create_design_asset_version_upload") as JsonValue);
+    },
+  );
+
+  registerTrackedTool({ scope: "write:assets", capability: "versionUpload" },
+    "complete_design_asset_upload",
+    {
+      title: "Complete Design Asset Upload",
+      description: "Verify size and checksum, then make a pending version current.",
+      inputSchema: {
+        uploadId: z.string().min(1),
+      },
+    },
+    async ({ uploadId }) => asTextContent(await fviPost(
+      await collectionPath(`/uploads/${encodeURIComponent(uploadId)}/complete`),
+      {},
+      "complete_design_asset_upload",
+    ) as JsonValue),
+  );
+
+  registerTrackedTool({ scope: "write:assets", capability: "versionHistory" },
+    "revert_design_asset_to_version",
+    {
+      title: "Revert Design Asset To Version",
+      description: "Make an earlier version current by copying it into a new version. History is not deleted.",
+      inputSchema: {
+        assetId: z.string().min(1),
+        version: z.number().int().positive(),
+        dryRun: z.boolean().optional(),
+      },
+    },
+    async ({ assetId, version, dryRun }) => asTextContent(await fviPost(
+      await collectionPath(`/assets/${encodeURIComponent(validateAssetId(assetId))}/revert`),
+      { version, ...(dryRun ? { dryRun: true } : {}) },
+      "revert_design_asset_to_version",
+    ) as JsonValue),
   );
 
 } else {
@@ -497,6 +727,67 @@ if (!config.readOnly) {
     message: "Write tools are disabled. Set FVI_READ_ONLY=false to re-enable uploads.",
   });
 }
+
+registerTrackedTool({ scope: "read", capability: "batchDownloadUrls" },
+  "get_design_asset_download_urls",
+  {
+    title: "Get Design Asset Download URLs",
+    description: "Short-lived download URLs for many assets. Lists over 50 ids are split automatically. One bad id does not fail the batch.",
+    inputSchema: {
+      assetIds: z.array(z.string().min(1)).min(1).describe("Asset ids or collection item ids."),
+    },
+  },
+  async ({ assetIds }) => {
+    const downloads: Record<string, JsonValue> = {};
+    for (let index = 0; index < assetIds.length; index += BATCH_DOWNLOAD_LIMIT) {
+      const chunk = assetIds.slice(index, index + BATCH_DOWNLOAD_LIMIT).map((id) => validateAssetId(id));
+      const response = await fviPost<{ downloads?: Record<string, JsonValue> }>(
+        await collectionPath("/assets/download-urls"),
+        { assetIds: chunk },
+        "get_design_asset_download_urls",
+      );
+      Object.assign(downloads, response.downloads ?? {});
+    }
+    return asTextContent({ downloads });
+  },
+);
+
+registerTrackedTool({ scope: "read", capability: "versionHistory" },
+  "list_design_asset_versions",
+  {
+    title: "List Design Asset Versions",
+    description: "Version history for an uploaded asset: number, name, size, verified hash, and source.",
+    inputSchema: { assetId: z.string().min(1) },
+  },
+  async ({ assetId }) => asTextContent(await fviGet(
+    await collectionPath(`/assets/${encodeURIComponent(validateAssetId(assetId))}/versions`),
+    "list_design_asset_versions",
+  ) as JsonValue),
+);
+
+async function applyAccessGates(): Promise<void> {
+  let whoami: Awaited<ReturnType<typeof resolveWhoami>> | null = null;
+  try {
+    whoami = await resolveWhoami();
+  } catch (error) {
+    logger.warn("collection.resolve_deferred", {
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+  const scopes = Array.isArray(whoami?.scopes) ? whoami.scopes : null;
+  const capabilities = whoami?.capabilities ?? null;
+  const allow = new Set(config.toolAllowlist);
+  for (const entry of trackedTools) {
+    if (config.readOnly && entry.scope !== "read") entry.tool.disable();
+    if (scopes && !scopes.includes(entry.scope)) entry.tool.disable();
+    if (entry.capability && (!capabilities || capabilities[entry.capability] !== true)) entry.tool.disable();
+    if (allow.size > 0 && !allow.has(entry.name)) entry.tool.disable();
+  }
+}
+
+recordsDataTools.push(spreadsheetPreviewTool);
+await applyFeatureFlags();
+await applyAccessGates();
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

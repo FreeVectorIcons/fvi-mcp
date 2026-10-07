@@ -7,6 +7,8 @@ export type McpWhoamiResponse = {
   collectionId: string;
   ownerUserId?: string;
   tokenKind?: string;
+  scopes?: string[];
+  capabilities?: Record<string, boolean>;
   collection?: {
     id: string;
     name?: string;
@@ -15,8 +17,8 @@ export type McpWhoamiResponse = {
   } | null;
 };
 
-let cachedCollectionId: string | null = null;
-let resolvePromise: Promise<string> | null = null;
+let cachedWhoami: McpWhoamiResponse | null = null;
+let resolvePromise: Promise<McpWhoamiResponse> | null = null;
 
 function mismatchError(configured: string, bound: string, setupUrl?: string): Error {
   const payload = {
@@ -35,8 +37,8 @@ function mismatchError(configured: string, bound: string, setupUrl?: string): Er
  * Uses GET /mcp/whoami when FVI_COLLECTION_ID is omitted, and fails closed when
  * an optional env override disagrees with the token binding.
  */
-export async function resolveCollectionId(): Promise<string> {
-  if (cachedCollectionId) return cachedCollectionId;
+export async function resolveWhoami(): Promise<McpWhoamiResponse> {
+  if (cachedWhoami) return cachedWhoami;
   if (resolvePromise) return resolvePromise;
 
   resolvePromise = (async () => {
@@ -52,14 +54,15 @@ export async function resolveCollectionId(): Promise<string> {
       throw mismatchError(config.collectionId, whoami.collectionId, setupUrl);
     }
 
-    cachedCollectionId = whoami.collectionId;
+    cachedWhoami = whoami;
     logger.info("collection.resolved", {
-      collectionId: cachedCollectionId,
+      collectionId: whoami.collectionId,
       source: config.collectionId ? "env+whoami" : "whoami",
       tokenId: whoami.tokenId,
       collectionName: whoami.collection?.name ?? null,
+      scopes: whoami.scopes ?? null,
     });
-    return cachedCollectionId;
+    return whoami;
   })();
 
   try {
@@ -70,6 +73,10 @@ export async function resolveCollectionId(): Promise<string> {
   }
 }
 
+export async function resolveCollectionId(): Promise<string> {
+  return (await resolveWhoami()).collectionId;
+}
+
 export async function collectionPath(path: string): Promise<string> {
   const collectionId = await resolveCollectionId();
   return `/mcp/collections/${encodeURIComponent(collectionId)}${path}`;
@@ -77,6 +84,6 @@ export async function collectionPath(path: string): Promise<string> {
 
 /** Test helper */
 export function resetResolvedCollectionIdForTests(): void {
-  cachedCollectionId = null;
+  cachedWhoami = null;
   resolvePromise = null;
 }
