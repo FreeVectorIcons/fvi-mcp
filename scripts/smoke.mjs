@@ -24,15 +24,18 @@ if (runtimeDeps.length > 0) {
 const workDir = mkdtempSync(join(tmpdir(), "fvi-mcp-smoke-"));
 const isolatedBin = join(workDir, "mcp-server.mjs");
 
-try {
-  copyFileSync(distFile, isolatedBin);
-
+function runServer(extraEnv) {
   const child = spawn(process.execPath, [isolatedBin], {
     cwd: workDir,
     env: {
       ...process.env,
       // Force resolution away from the monorepo node_modules tree.
       NODE_PATH: "",
+      // Unreachable API so whoami fails fast instead of calling production.
+      FVI_API_URL: "http://127.0.0.1:9",
+      FVI_RETRY_MAX: "1",
+      FVI_TIMEOUT_MS: "500",
+      ...extraEnv,
     },
     stdio: ["ignore", "ignore", "pipe"],
   });
@@ -43,17 +46,31 @@ try {
     stderr += chunk;
   });
 
-  const exitCode = await new Promise((resolve) => {
+  return new Promise((resolve) => {
     // Stdio server exits cleanly when stdin is ignored/closed.
     const timer = setTimeout(() => {
       child.kill("SIGTERM");
-      resolve(null);
+      resolve({ exitCode: null, stderr });
     }, 3000);
 
     child.on("exit", (code) => {
       clearTimeout(timer);
-      resolve(code);
+      resolve({ exitCode: code, stderr });
     });
+  });
+}
+
+try {
+  copyFileSync(distFile, isolatedBin);
+
+  const missing = await runServer({ FVI_TOKEN: "" });
+  if (missing.exitCode !== 1 || !missing.stderr.includes("TOKEN_MISSING")) {
+    console.error("smoke failed: missing FVI_TOKEN should exit 1 with TOKEN_MISSING\n", missing.stderr);
+    process.exit(1);
+  }
+
+  const { exitCode, stderr } = await runServer({
+    FVI_TOKEN: "fvi_col_smoketestsmoketestsmoketest",
   });
 
   if (stderr.includes("Cannot find package") || stderr.includes("ERR_MODULE_NOT_FOUND")) {

@@ -1,6 +1,6 @@
 {
   "name": "@freevectoricons/mcp",
-  "version": "0.2.0-beta.6",
+  "version": "0.3.0-beta.1",
   "description": "Beta MCP server for FreeVectorIcons design collections",
   "author": "Hemanta Sapkota <hemanta@freevectoricons.com>",
   "license": "MIT",
@@ -37,7 +37,7 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^25.3.3",
     "esbuild": "0.28.2",
     "typescript": "~5.9.2",

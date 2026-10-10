@@ -77,7 +77,11 @@ Edit `~/.config/Claude/claude_desktop_config.json` and add the same `mcpServers`
 | `FVI_TOKEN` | yes | — | Collection-scoped MCP token (`fvi_col_*`). Collection binding is derived via `GET /api/mcp/whoami`. |
 | `FVI_COLLECTION_ID` | no | — | **Deprecated / override only.** If set and it disagrees with the token’s collection, the adapter fails closed (`COLLECTION_MISMATCH`). Prefer omitting it. |
 | `FVI_API_URL` | no | `https://freevectoricons.com/api` | API base URL (include `/api`) |
-| `FVI_READ_ONLY` | no | `false` | When `true`, write tools are not registered |
+| `FVI_READ_ONLY` | no | `false` | When `true`, write tools are not registered. Can only narrow token scopes |
+| `FVI_TOOLS` | no | — | Comma-separated tool names to register. Can only narrow access |
+| `FVI_SKIP_TOKEN_CHECK` | no | `false` | Escape hatch if a future token shape is rejected locally |
+| `FVI_ALLOW_FILE_PATHS` | no | `false` | Allow `filePath` on upload tools. Off by default |
+| `FVI_FILE_PATH_ROOTS` | no | — | Comma-separated directories `filePath` may read |
 | `FVI_TIMEOUT_MS` | no | `30000` | HTTP request timeout for API calls (milliseconds) |
 | `FVI_UPLOAD_TIMEOUT_MS` | no | `120000` | Timeout for binary upload requests (milliseconds) |
 | `FVI_RETRY_MAX` | no | `3` | Maximum retry attempts for transient failures |
@@ -118,7 +122,9 @@ Restarting MCP servers alone does **not** rebind a shared stdio connector that s
 | `get_design_asset` | One asset by ID |
 | `get_design_asset_content` | Inline UTF-8 for catalog SVGs, uploaded SVGs, Markdown |
 | `get_design_asset_download_url` | Short-lived URL for PNG, PDF, spreadsheets (XLS/XLSX), and other binaries |
+| `get_design_asset_download_urls` | The same URLs for up to 50 assets per call |
 | `get_design_asset_spreadsheet_preview` | Size-capped first-sheet CSV/HTML preview for XLS/XLSX |
+| `list_design_asset_versions` | Version number, name, size, verified hash, and source |
 
 ### Write (enabled by default)
 
@@ -130,8 +136,13 @@ Restarting MCP servers alone does **not** rebind a shared stdio connector that s
 | `update_design_collection_strategy_brief` | Replace `collection.metadata.strategyBrief` (native Strategy Brief tab) |
 | `promote_design_asset_to_strategy_brief` | Copy Markdown asset text into the native brief (does not delete the asset) |
 | `update_design_asset_transcription_status` | Patch `textLayer` / `transcription` metadata (no OCR) |
-| `update_design_asset` | Metadata-only PATCH: name, tags, documentType, DRL fields |
-| `delete_design_collection_asset` | Soft-unlink collection item only — does **not** hard-delete bytes |
+| `update_design_asset` | Metadata-only PATCH: name, tags, documentType, DRL fields, custom metadata, and links |
+| `set_collection_design_md` | Pin the canonical DESIGN.md from inline Markdown or an existing asset |
+| `update_design_collection_purpose` | Set collection purpose to `brand` or `records` |
+| `create_design_asset_version_upload` | Signed upload for a new version of an existing asset |
+| `complete_design_asset_upload` | Verify checksum and size, then make that version current |
+| `revert_design_asset_to_version` | Copy an earlier version forward. History is kept |
+| `delete_design_collection_asset` | Soft-unlink collection item only — does **not** hard-delete bytes. Requires the `delete` scope |
 | `probe_design_asset_text_layer` | Best-effort PDF embedded text probe (API feature-flagged) |
 
 Uploaded assets keep version history in FreeVectorIcons. Agents should prefer `create_design_asset_version` when refining an existing design, and `park_design_asset` for new files. Agents should use metadata and download URLs for images, PDFs, and spreadsheets (`.xls` / `.xlsx`) — workbook bytes are not dumped into MCP tool results. Use `get_design_asset_spreadsheet_preview` for a capped first-sheet look. For scanned PDFs, set transcription status after parking a Markdown sibling.
