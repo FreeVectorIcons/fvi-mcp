@@ -1,28 +1,26 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { config } from "./config.js";
+import { DEFAULT_TOOL_LIMITS, type ToolLimits } from "./limits.js";
 
 const ASSET_ID_PATTERN = /^[A-Za-z0-9._:-]+$/;
 
-export function validateSearchQuery(query: string): string {
+export function validateSearchQuery(query: string, limits: ToolLimits = DEFAULT_TOOL_LIMITS): string {
   const trimmed = query.trim();
   if (!trimmed) {
     throw new Error("Search query is required.");
   }
-  if (trimmed.length > config.maxSearchQueryLength) {
-    throw new Error(`Search query must be at most ${config.maxSearchQueryLength} characters.`);
+  if (trimmed.length > limits.maxSearchQueryLength) {
+    throw new Error(`Search query must be at most ${limits.maxSearchQueryLength} characters.`);
   }
   return trimmed;
 }
 
-export function validateAssetId(assetId: string): string {
+export function validateAssetId(assetId: string, limits: ToolLimits = DEFAULT_TOOL_LIMITS): string {
   const trimmed = assetId.trim();
   if (!trimmed) {
     throw new Error("assetId is required.");
   }
-  if (trimmed.length > config.maxAssetIdLength) {
-    throw new Error(`assetId must be at most ${config.maxAssetIdLength} characters.`);
+  if (trimmed.length > limits.maxAssetIdLength) {
+    throw new Error(`assetId must be at most ${limits.maxAssetIdLength} characters.`);
   }
   if (!ASSET_ID_PATTERN.test(trimmed)) {
     throw new Error("assetId contains unsupported characters. Use letters, numbers, dots, colons, underscores, or hyphens.");
@@ -30,12 +28,12 @@ export function validateAssetId(assetId: string): string {
   return trimmed;
 }
 
-export function validateUploadSize(sizeBytes: number): void {
+export function validateUploadSize(sizeBytes: number, limits: ToolLimits = DEFAULT_TOOL_LIMITS): void {
   if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) {
     throw new Error("Upload size must be a positive integer number of bytes.");
   }
-  if (sizeBytes > config.maxUploadBytes) {
-    throw new Error(`Upload exceeds the ${config.maxUploadBytes} byte limit.`);
+  if (sizeBytes > limits.maxUploadBytes) {
+    throw new Error(`Upload exceeds the ${limits.maxUploadBytes} byte limit.`);
   }
 }
 
@@ -52,7 +50,7 @@ export function validateSvgTextContent(textContent: string): void {
   }
 }
 
-export function validateBase64Content(contentBase64: string): void {
+export function validateBase64Content(contentBase64: string, limits: ToolLimits = DEFAULT_TOOL_LIMITS): void {
   const trimmed = contentBase64.trim();
   if (!trimmed) {
     throw new Error("contentBase64 is empty.");
@@ -68,7 +66,7 @@ export function validateBase64Content(contentBase64: string): void {
   if (decoded.length === 0) {
     throw new Error("contentBase64 decoded to an empty payload.");
   }
-  validateUploadSize(decoded.length);
+  validateUploadSize(decoded.length, limits);
 }
 
 export function sha256Hex(bytes: Buffer): string {
@@ -91,45 +89,28 @@ export function assertDecodedChecksum(bytes: Buffer, supplied?: string): string 
   return actual;
 }
 
-export async function readOptInUploadFile(filePath: string): Promise<Buffer> {
-  if (!config.allowFilePaths) {
-    throw new Error("filePath uploads are off. Set FVI_ALLOW_FILE_PATHS=true and FVI_FILE_PATH_ROOTS to opt in.");
-  }
-  if (config.filePathRoots.length === 0) {
-    throw new Error("FVI_FILE_PATH_ROOTS is empty. Set it to the directories an agent may read.");
-  }
-  const resolved = path.resolve(filePath);
-  const allowed = config.filePathRoots.some((root) => {
-    const rootResolved = path.resolve(root);
-    return resolved === rootResolved || resolved.startsWith(rootResolved + path.sep);
-  });
-  if (!allowed) {
-    throw new Error("filePath is outside FVI_FILE_PATH_ROOTS.");
-  }
-  const bytes = await readFile(resolved);
-  validateUploadSize(bytes.byteLength);
-  return bytes;
-}
-
-export function validateWriteContent(input: {
-  contentType: string;
-  textContent?: string;
-  contentBase64?: string;
-}): void {
+export function validateWriteContent(
+  input: {
+    contentType: string;
+    textContent?: string;
+    contentBase64?: string;
+  },
+  limits: ToolLimits = DEFAULT_TOOL_LIMITS,
+): void {
   if (typeof input.textContent === "string" && typeof input.contentBase64 === "string") {
     throw new Error("Provide either textContent or contentBase64, not both.");
   }
   if (input.contentType === "image/svg+xml" && typeof input.textContent === "string") {
     validateSvgTextContent(input.textContent);
-    validateUploadSize(Buffer.byteLength(input.textContent, "utf8"));
+    validateUploadSize(Buffer.byteLength(input.textContent, "utf8"), limits);
     return;
   }
   if (typeof input.textContent === "string") {
-    validateUploadSize(Buffer.byteLength(input.textContent, "utf8"));
+    validateUploadSize(Buffer.byteLength(input.textContent, "utf8"), limits);
     return;
   }
   if (typeof input.contentBase64 === "string") {
-    validateBase64Content(input.contentBase64);
+    validateBase64Content(input.contentBase64, limits);
     return;
   }
   throw new Error("textContent or contentBase64 is required.");

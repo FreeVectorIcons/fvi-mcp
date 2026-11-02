@@ -1,0 +1,57 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.FreeVectorIcons/fvi-mcp",
+  "title": "FreeVectorIcons",
+  "description": "Read and write a FreeVectorIcons design collection: briefs, DESIGN.md, icons and brand assets.",
+  "version": "0.3.0-beta.2",
+  "websiteUrl": "https://freevectoricons.com/mcp",
+  "repository": {
+    "url": "https://github.com/FreeVectorIcons/fvi-mcp",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/FreeVectorIcons/fvi-mcp/main/assets/logo.svg",
+      "mimeType": "image/svg+xml"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@freevectoricons/mcp",
+      "version": "0.3.0-beta.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "FVI_TOKEN",
+          "description": "Collection-scoped token (fvi_col_…) from FreeVectorIcons → your collection → Integrations → Setup MCP. The collection is derived from this token. Never commit this value.",
+          "format": "string",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "FVI_API_URL",
+          "description": "API origin including /api. Leave the default for production.",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "https://freevectoricons.com/api"
+        },
+        {
+          "name": "FVI_READ_ONLY",
+          "description": "Set true to hide write tools (park, upload, version).",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "false",
+          "choices": [
+            "true",
+            "false"
+          ]
+        }
+      ]
+    }
+  ]
+}

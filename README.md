@@ -20,17 +20,6 @@ This server exposes that collection to MCP clients. Agents search and retrieve c
 - A FreeVectorIcons account
 - A collection-scoped MCP token
 
-## Cursor Marketplace (plugin)
-
-This repository is also a **Cursor Plugin** (`.cursor-plugin/plugin.json` + `mcp.json`).
-
-1. Install from Cursor Marketplace once listed, **or** copy this repo to `~/.cursor/plugins/local/freevectoricons` for local testing (copy files; avoid broken symlinks).
-2. Open **Plugins → Configure** and set **Collection token** (`FVI_TOKEN`) from FreeVectorIcons → Integrations → Setup MCP.
-3. Optional: `FVI_API_URL` (defaults to production), `FVI_READ_ONLY=true` to hide write tools.
-4. Collection id is **not** required — `@freevectoricons/mcp@0.2.0-beta.2+` resolves it via whoami.
-
-Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
-
 ## Setup
 
 1. Open a collection at [freevectoricons.com](https://freevectoricons.com).
@@ -57,6 +46,46 @@ Add the server to your MCP client configuration (for example `.cursor/mcp.json`)
 Run the server with `npx` as shown above. MCP uses stdio for protocol messages; the process must not write non-protocol output to stdout.
 
 See [`mcp.json.example`](./mcp.json.example) for a copy-paste template.
+
+## Cursor Marketplace (plugin)
+
+This repository is also a **Cursor Plugin** (`.cursor-plugin/plugin.json` + `mcp.json`).
+
+1. Install from Cursor Marketplace once listed, **or** copy this repo to `~/.cursor/plugins/local/freevectoricons` for local testing (copy files; avoid broken symlinks).
+2. Open **Plugins → Configure** and set **Collection token** (`FVI_TOKEN`) from FreeVectorIcons → Integrations → Setup MCP.
+3. Optional: `FVI_API_URL` (defaults to production), `FVI_READ_ONLY=true` to hide write tools.
+
+Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
+
+## Google Antigravity and Gemini CLI (not yet verified)
+
+> These install paths are being tested. Until they pass, treat them as a preview and [report issues](https://github.com/FreeVectorIcons/fvi-mcp/issues).
+
+**Antigravity plugin.** This repository is also an Antigravity plugin (`.antigravity-plugin/plugin.json`, `mcp_config.json` and the `skills/` folder). Install it, then turn it on under `/plugin` (CLI) or Settings → Customizations (app) and paste your collection token when asked.
+
+**Antigravity config block.** Or add this to `~/.gemini/config/mcp_config.json` (all projects) or `.agents/mcp_config.json` (one workspace):
+
+```json
+{
+  "mcpServers": {
+    "freevectoricons": {
+      "command": "npx",
+      "args": ["-y", "@freevectoricons/mcp"],
+      "env": {
+        "FVI_TOKEN": "<collection-token>"
+      }
+    }
+  }
+}
+```
+
+**Gemini CLI extension.** Install from this repository and enter your collection token when prompted:
+
+```bash
+gemini extensions install https://github.com/FreeVectorIcons/fvi-mcp
+```
+
+Change the token later with `gemini extensions config freevectoricons`. The extension pins a released package version, so a new release reaches you when you run `gemini extensions update freevectoricons`.
 
 ### macOS (Claude Desktop)
 
@@ -125,6 +154,8 @@ Restarting MCP servers alone does **not** rebind a shared stdio connector that s
 | `get_design_asset_download_urls` | The same URLs for up to 50 assets per call |
 | `get_design_asset_spreadsheet_preview` | Size-capped first-sheet CSV/HTML preview for XLS/XLSX |
 | `list_design_asset_versions` | Version number, name, size, verified hash, and source |
+| `list_community_packs` | Public community icon packs with license and `agentGuide` URLs |
+| `get_community_pack_guide` | A pack's AGENTS.md: license, attribution, URL patterns, curated usage guide |
 
 ### Write (enabled by default)
 
@@ -171,9 +202,23 @@ node dist/mcp-server.mjs
 
 ```bash
 npm install
+npm test
 npm run build
 npm run smoke
+npm run contract
 node dist/mcp-server.mjs
+```
+
+Tool definitions live in `src/tools/definitions.ts` and talk to the API through the `FviApiClient` interface, so the hosted MCP endpoint can register the same tools. `src/mcp-server.ts` is the stdio host. `npm run contract` lists tools from the built server against a local fake API and compares names, schemas and flag gating with `scripts/tools-contract.json`. If a tool change is intended, rebuild and run `node ./scripts/contract.mjs --update`.
+
+### Host files
+
+`distribution.json` is the single source for install metadata. `npm run hosts` writes `server.json` (MCP Registry), `.cursor-plugin/plugin.json` and `mcp.json` (Cursor), `.antigravity-plugin/plugin.json` and `mcp_config.json` (Antigravity), `gemini-extension.json` and `GEMINI.md` (Gemini CLI), and `mcpName` in `package.json`. Versions come from `package.json`, and every host config pins that npm version. Do not edit the generated files by hand; `npm run hosts:check` fails in CI when they drift. Agent guidance lives in `skills/fvi-design-collection/SKILL.md`, which Cursor, Antigravity and Gemini CLI all load.
+
+```bash
+npm run hosts          # regenerate after changing distribution.json or the version
+npm run pack-check     # pack, install into an empty directory, confirm every contract tool loads
+npm run compat:gemini  # report schema keywords outside the Gemini function-declaration subset
 ```
 
 To run from a local checkout:

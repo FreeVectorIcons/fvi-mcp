@@ -1,35 +1,46 @@
 ---
 name: fvi-design-collection
 description: >-
-  Use when working with a FreeVectorIcons design collection over MCP — reading
-  strategy/DESIGN.md context, listing or searching assets, downloading files, or
-  parking uploads back into the bound collection.
+  Use when the user needs icons, logos, brand assets or a project's design rules
+  and a FreeVectorIcons MCP server is connected: reading a collection's strategy
+  brief and DESIGN.md, searching or fetching its SVGs and files, or saving a
+  deliverable back into the collection as a new asset or version. Do not use for
+  unrelated coding tasks.
 ---
 
 # FreeVectorIcons design collection
 
 ## When to use
 
-- The user points at a FreeVectorIcons collection or Setup MCP token
-- You need durable project context (strategy brief, DESIGN.md, assets) instead of regenerating SVG from scratch
-- You should upload or version a deliverable back into the same collection
+- The user asks for icons, a logo, illustrations or other brand assets for the work in front of you
+- The user asks what the brand or design rules are, or wants output that follows them
+- The user points at a FreeVectorIcons collection or a Setup MCP token
+- A deliverable should be saved or versioned back into the same collection
+
+Do not reach for FreeVectorIcons tools for tasks that have nothing to do with design assets or brand rules.
 
 ## Setup
 
-Collection binding comes from `FVI_TOKEN` (whoami). Do not ask for a separate collection id unless diagnosing a mismatch.
+The collection comes from `FVI_TOKEN`. Do not ask for a separate collection id unless diagnosing a mismatch.
 
-Mint tokens at freevectoricons.com → collection → Integrations → Setup MCP.
+Tokens are minted at freevectoricons.com → collection → Integrations → Setup MCP. Treat the token like a password: never print it, echo it back, write it into files or include it in commit messages.
 
 ## Recommended flow
 
-1. Call `get_design_collection_context` first (metadata, strategy, DESIGN.md pointers). If `designSystem.selection` is not `pinned`, ask before pinning one with `set_collection_design_md`.
-2. Prefer `search_design_collection_assets` / `list_design_collection_assets` before downloading bytes.
-3. Use `get_design_asset_content` for SVG/Markdown; use download URLs for PDFs and large binaries. For several files, use `get_design_asset_download_urls` (up to 50 per call).
-4. Write back with `park_design_asset` or `create_design_asset_version` only when the user wants the collection updated. Use `list_design_asset_versions` and `revert_design_asset_to_version` to undo; history is never deleted.
-5. If you see `COLLECTION_MISMATCH`, stop — mint a token for the named collection (or omit a stale collection id override) and reload MCP. `mcp_auth` is not a collection switch.
-6. On `TOKEN_MISSING`, `TOKEN_MALFORMED`, or `TOKEN_INVALID`, ask the user for a fresh token from Setup MCP. On `SCOPE_REQUIRED`, the token preset does not allow that action; do not retry. On `CHECKSUM_MISMATCH`, re-read the file and upload again.
+1. Call `get_design_collection_context` first. Read the strategy brief and DESIGN.md before choosing or generating any asset, and follow them. If `designSystem.selection` is not `pinned`, ask before pinning one with `set_collection_design_md`.
+2. Prefer assets already in the user's collection over drawing new SVG or using the public catalogue. Use `search_design_collection_assets` or `list_design_collection_assets` before downloading bytes.
+3. Use `get_design_asset_content` for SVG and Markdown. Use download URLs for PDFs and large binaries; for several files, `get_design_asset_download_urls` takes up to 50 per call.
+4. If the collection has nothing suitable, `list_community_packs` and `get_community_pack_guide` show public packs with their licence and attribution rules. Follow the pack's guide.
+5. Write back with `park_design_asset` or `create_design_asset_version` only when the user wants the collection updated. Say what you are about to save first. Use `list_design_asset_versions` and `revert_design_asset_to_version` to undo; history is never deleted.
+
+## Errors
+
+- `COLLECTION_MISMATCH`: stop. Mint a token for the named collection, or remove a stale collection id override, then reload the MCP server. Signing in again is not a collection switch.
+- `TOKEN_MISSING`, `TOKEN_MALFORMED` or `TOKEN_INVALID`: ask the user for a fresh token from Setup MCP.
+- `SCOPE_REQUIRED`: the token does not allow that action. Do not retry.
+- `CHECKSUM_MISMATCH`: re-read the file and upload again.
 
 ## Non-goals
 
-- Do not create unlimited collections through MCP
-- Do not treat Cursor `mcp_auth` as retargeting to a different collection
+- Do not create collections through MCP
+- Do not treat a host's MCP sign-in as retargeting to a different collection

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://antigravity.google/schemas/v1/plugin.json",
+  "name": "freevectoricons",
+  "displayName": "FreeVectorIcons",
+  "version": "0.3.0-beta.2",
+  "description": "Connect your agent to a FreeVectorIcons design collection: read the brief and DESIGN.md, search and fetch icons and brand assets, and save work back as versions.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Read my FreeVectorIcons collection brief and DESIGN.md, then summarise the brand rules",
+    "Find icons in my collection for a settings page and add them to this component",
+    "Save this SVG to my collection as a new version of the existing logo"
+  ],
+  "author": {
+    "name": "FreeVectorIcons",
+    "email": "hemanta@freevectoricons.com",
+    "url": "https://freevectoricons.com"
+  },
+  "homepage": "https://freevectoricons.com/mcp",
+  "repository": "https://github.com/FreeVectorIcons/fvi-mcp",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "icons",
+    "svg",
+    "design",
+    "brand",
+    "collections",
+    "agents"
+  ]
+}

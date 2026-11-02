@@ -1,6 +1,7 @@
 {
   "name": "@freevectoricons/mcp",
-  "version": "0.3.0-beta.1",
+  "mcpName": "io.github.FreeVectorIcons/fvi-mcp",
+  "version": "0.3.0-beta.2",
   "description": "Beta MCP server for FreeVectorIcons design collections",
   "author": "Hemanta Sapkota <hemanta@freevectoricons.com>",
   "license": "MIT",
@@ -32,16 +33,22 @@
     "prepublishOnly": "node ./build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "smoke": "node ./scripts/smoke.mjs",
+    "contract": "node ./scripts/contract.mjs",
+    "test": "node ./scripts/run-tests.mjs",
+    "hosts": "node ./scripts/generate-host-files.mjs",
+    "hosts:check": "node ./scripts/generate-host-files.mjs --check",
+    "pack-check": "node ./scripts/pack-check.mjs",
+    "compat:gemini": "node ./scripts/gemini-schema-check.mjs",
     "audit:consumer": "npm audit --omit=dev --audit-level=moderate",
     "audit:maintainer": "npm audit --audit-level=high"
   },
   "dependencies": {},
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/node": "^25.3.3",
-    "esbuild": "0.28.2",
+    "esbuild": "0.28.1",
     "typescript": "~5.9.2",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "engines": {
     "node": ">=20"
@@ -49,10 +56,5 @@
   "publishConfig": {
     "access": "public",
     "provenance": true
-  },
-  "overrides": {
-    "fast-uri": "3.1.8",
-    "hono": "4.13.8",
-    "qs": "6.16.0"
   }
 }
