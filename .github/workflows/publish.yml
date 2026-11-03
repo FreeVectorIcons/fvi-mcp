@@ -1,6 +1,7 @@
 name: Publish
 
-# Publishes @freevectoricons/mcp to npm via OIDC trusted publishing.
+# Publishes @freevectoricons/mcp to npm via OIDC trusted publishing, then
+# lists io.github.FreeVectorIcons/fvi-mcp on the Official MCP Registry.
 # Only the designated maintainer may start a release; the npm-publish
 # environment further scopes which refs can deploy.
 on:
@@ -10,6 +11,11 @@ on:
         description: "Type the exact package.json version to publish (e.g. 0.2.0-beta.1)"
         required: true
         type: string
+      registry_only:
+        description: "Skip npm; only list the already-published version on the MCP Registry"
+        required: false
+        type: boolean
+        default: false
   push:
     tags:
       - "v*"
@@ -28,7 +34,7 @@ jobs:
     timeout-minutes: 15
     # Hard gate: only the package maintainer can publish, even if others
     # later gain write access when the project is public.
-    if: github.actor == 'hemantasapkota'
+    if: github.actor == 'hemantasapkota' && !inputs.registry_only
     environment: npm-publish
     permissions:
       contents: read
@@ -36,10 +42,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
@@ -97,3 +103,80 @@ jobs:
         # Prerelease versions (e.g. 0.2.0-beta.1) require an explicit tag.
         # Keep latest while the package is still beta so npx @freevectoricons/mcp picks it up.
         run: npm publish --access public --provenance --tag latest
+
+  mcp-registry:
+    name: Publish to MCP Registry
+    needs: publish
+    # Runs after a successful npm publish, or alone when registry_only=true.
+    if: >-
+      always() && github.actor == 'hemantasapkota' &&
+      (needs.publish.result == 'success' ||
+       (needs.publish.result == 'skipped' && inputs.registry_only))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-publish
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC login to the registry
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.7
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Verify server.json matches package.json and npm
+        env:
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          PKG_NAME="$(jq -r .name package.json)"
+          PKG_VERSION="$(jq -r .version package.json)"
+          MCP_NAME="$(jq -r .mcpName package.json)"
+          SRV_NAME="$(jq -r .name server.json)"
+          SRV_VERSION="$(jq -r .version server.json)"
+          SRV_PKG_ID="$(jq -r '.packages[0].identifier' server.json)"
+          SRV_PKG_VERSION="$(jq -r '.packages[0].version' server.json)"
+          fail=0
+          [ "${MCP_NAME}" = "${SRV_NAME}" ] || { echo "::error::package.json mcpName (${MCP_NAME}) != server.json name (${SRV_NAME})"; fail=1; }
+          [ "${SRV_PKG_ID}" = "${PKG_NAME}" ] || { echo "::error::server.json package identifier (${SRV_PKG_ID}) != package.json name (${PKG_NAME})"; fail=1; }
+          [ "${SRV_VERSION}" = "${PKG_VERSION}" ] || { echo "::error::server.json version (${SRV_VERSION}) != package.json (${PKG_VERSION})"; fail=1; }
+          [ "${SRV_PKG_VERSION}" = "${PKG_VERSION}" ] || { echo "::error::server.json packages[0].version (${SRV_PKG_VERSION}) != package.json (${PKG_VERSION})"; fail=1; }
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            [ "${CONFIRM_VERSION}" = "${PKG_VERSION}" ] || { echo "::error::confirm_version (${CONFIRM_VERSION}) != package.json (${PKG_VERSION})"; fail=1; }
+          else
+            [ "${REF_NAME#v}" = "${PKG_VERSION}" ] || { echo "::error::tag ${REF_NAME} != package.json ${PKG_VERSION}"; fail=1; }
+          fi
+          [ "${fail}" = 0 ] || exit 1
+          # The registry validates that the npm package exists and carries mcpName.
+          NPM_MCP_NAME="$(npm view "${PKG_NAME}@${PKG_VERSION}" mcpName 2>/dev/null || true)"
+          [ "${NPM_MCP_NAME}" = "${MCP_NAME}" ] || { echo "::error::${PKG_NAME}@${PKG_VERSION} not on npm with mcpName ${MCP_NAME} (got '${NPM_MCP_NAME}')"; exit 1; }
+          echo "OK: ${SRV_NAME}@${SRV_VERSION} -> ${PKG_NAME}@${PKG_VERSION}"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Authenticate to MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
