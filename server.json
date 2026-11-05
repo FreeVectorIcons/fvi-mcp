@@ -3,7 +3,7 @@
   "name": "io.github.FreeVectorIcons/fvi-mcp",
   "title": "FreeVectorIcons",
   "description": "Read and write a FreeVectorIcons design collection: briefs, DESIGN.md, icons and brand assets.",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0-beta.3",
   "websiteUrl": "https://freevectoricons.com/mcp",
   "repository": {
     "url": "https://github.com/FreeVectorIcons/fvi-mcp",
@@ -19,7 +19,7 @@
     {
       "registryType": "npm",
       "identifier": "@freevectoricons/mcp",
-      "version": "0.3.0-beta.2",
+      "version": "0.3.0-beta.3",
       "transport": {
         "type": "stdio"
       },
@@ -52,6 +52,12 @@
           ]
         }
       ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.freevectoricons.com/mcp"
     }
   ]
 }

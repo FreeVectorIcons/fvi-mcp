@@ -13,13 +13,21 @@
   "homepage": "https://freevectoricons.com/mcp",
   "repository": "https://github.com/FreeVectorIcons/fvi-mcp",
   "license": "MIT",
-  "keywords": ["mcp", "icons", "svg", "design", "brand", "collections", "agents"],
+  "keywords": [
+    "mcp",
+    "icons",
+    "svg",
+    "design",
+    "brand",
+    "collections",
+    "agents"
+  ],
   "logo": "assets/logo.svg",
   "logoUrl": "https://raw.githubusercontent.com/FreeVectorIcons/fvi-mcp/main/assets/logo.svg",
   "skill": "fvi-design-collection",
   "tokenLink": "https://freevectoricons.com/collections",
   "suggestedPrompts": [
-    "Read my FreeVectorIcons collection brief and DESIGN.md, then summarise the brand rules",
+    "Connect to my FreeVectorIcons collection and summarise what is in it and what the brand guidelines say",
     "Find icons in my collection for a settings page and add them to this component",
     "Save this SVG to my collection as a new version of the existing logo"
   ],
@@ -27,7 +35,7 @@
     {
       "name": "FVI_TOKEN",
       "title": "Collection token",
-      "description": "Collection-scoped token (fvi_col_…) from FreeVectorIcons → your collection → Integrations → Setup MCP. The collection is derived from this token. Never commit this value.",
+      "description": "Collection-scoped token (fvi_col_\u2026) from FreeVectorIcons \u2192 your collection \u2192 Integrations \u2192 Setup MCP. The collection is derived from this token. Never commit this value.",
       "required": true,
       "secret": true
     },
@@ -41,8 +49,12 @@
       "name": "FVI_READ_ONLY",
       "title": "Read only",
       "description": "Set true to hide write tools (park, upload, version).",
-      "choices": ["true", "false"],
+      "choices": [
+        "true",
+        "false"
+      ],
       "default": "false"
     }
-  ]
+  ],
+  "hostedMcpUrl": "https://mcp.freevectoricons.com/mcp"
 }

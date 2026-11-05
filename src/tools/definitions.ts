@@ -23,6 +23,9 @@ const uploadContentTypes = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ] as const;
 
+const UPLOAD_URL_GUIDANCE =
+  "PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_design_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user.";
+
 const BATCH_DOWNLOAD_LIMIT = 50;
 
 function asTextContent(payload: JsonValue) {
@@ -226,7 +229,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "create_design_asset_upload",
     scope: "write:assets",
     title: "Create Design Asset Upload",
-    description: "Create a signed upload target and collection asset record for parking a DRL/FVI design asset.",
+    description: `Create a collection asset record and an upload URL, for files too large to send inline. ${UPLOAD_URL_GUIDANCE} Then call complete_design_asset_upload with the returned versionId as uploadId.`,
     inputSchema: {
       name: z.string().min(1).describe("File name for the asset."),
       contentType: z.enum(uploadContentTypes).describe("MIME type for the uploaded asset."),
@@ -588,7 +591,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:assets",
     capability: "versionUpload",
     title: "Create Design Asset Version Upload",
-    description: "Start a new version of an existing asset with a signed upload. Call complete_design_asset_upload after the bytes are uploaded. The version stays hidden until then.",
+    description: `Start a new version of an existing asset with an upload URL. ${UPLOAD_URL_GUIDANCE} Then call complete_design_asset_upload with the returned uploadId. The version stays hidden until then.`,
     inputSchema: {
       assetId: z.string().min(1),
       name: z.string().optional(),
@@ -648,6 +651,22 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       await api.collectionPath(`/uploads/${encodeURIComponent(uploadId)}/complete`),
       {},
       "complete_design_asset_upload",
+    ) as JsonValue),
+  }),
+
+  defineTool({
+    name: "refresh_design_asset_upload",
+    scope: "write:assets",
+    capability: "versionUpload",
+    title: "Refresh Design Asset Upload",
+    description: "Get a fresh upload URL for a pending upload whose URL expired. The previous URL stops working. Upload the original bytes; never substitute a smaller file.",
+    inputSchema: {
+      uploadId: z.string().min(1).describe("The uploadId (or versionId) returned when the upload was created."),
+    },
+    handler: async ({ api }, { uploadId }) => asTextContent(await api.post(
+      await api.collectionPath(`/uploads/${encodeURIComponent(uploadId)}/refresh`),
+      {},
+      "refresh_design_asset_upload",
     ) as JsonValue),
   }),
 

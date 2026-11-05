@@ -16,7 +16,7 @@ if (tokenProblem) {
 
 const server = new McpServer({
   name: "freevectoricons",
-  version: "0.3.0-beta.2",
+  version: "0.3.0-beta.3",
 });
 
 const host: ToolHost = {

@@ -57,11 +57,11 @@ This repository is also a **Cursor Plugin** (`.cursor-plugin/plugin.json` + `mcp
 
 Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
 
-## Google Antigravity and Gemini CLI (not yet verified)
+## Google Antigravity and Gemini CLI (preview)
 
-> These install paths are being tested. Until they pass, treat them as a preview and [report issues](https://github.com/FreeVectorIcons/fvi-mcp/issues).
+> Gemini CLI passed a 0.3 compatibility pass. Antigravity plugin discovery is still being verified — [report issues](https://github.com/FreeVectorIcons/fvi-mcp/issues).
 
-**Antigravity plugin.** This repository is also an Antigravity plugin (`.antigravity-plugin/plugin.json`, `mcp_config.json` and the `skills/` folder). Install it, then turn it on under `/plugin` (CLI) or Settings → Customizations (app) and paste your collection token when asked.
+**Antigravity plugin.** This repository is an Antigravity plugin (`.antigravity-plugin/plugin.json`, root `mcp_config.json`, and `skills/`). It points at the hosted MCP server (`https://mcp.freevectoricons.com/mcp`) over Streamable HTTP. Install or enable the plugin, then **Authenticate** and pick a collection — Antigravity negotiates OAuth (dynamic client registration). Do not paste a collection token into the Antigravity plugin path.
 
 **Antigravity config block.** Or add this to `~/.gemini/config/mcp_config.json` (all projects) or `.agents/mcp_config.json` (one workspace):
 
@@ -69,15 +69,13 @@ Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketpla
 {
   "mcpServers": {
     "freevectoricons": {
-      "command": "npx",
-      "args": ["-y", "@freevectoricons/mcp"],
-      "env": {
-        "FVI_TOKEN": "<collection-token>"
-      }
+      "serverUrl": "https://mcp.freevectoricons.com/mcp"
     }
   }
 }
 ```
+
+Then open MCP Servers → Manage, click **Authenticate** on `freevectoricons`, and choose the collection to bind.
 
 **Gemini CLI extension.** Install from this repository and enter your collection token when prompted:
 
@@ -172,6 +170,7 @@ Restarting MCP servers alone does **not** rebind a shared stdio connector that s
 | `update_design_collection_purpose` | Set collection purpose to `brand` or `records` |
 | `create_design_asset_version_upload` | Signed upload for a new version of an existing asset |
 | `complete_design_asset_upload` | Verify checksum and size, then make that version current |
+| `refresh_design_asset_upload` | Issue a fresh upload URL for a pending upload whose URL expired (15 minutes) |
 | `revert_design_asset_to_version` | Copy an earlier version forward. History is kept |
 | `delete_design_collection_asset` | Soft-unlink collection item only — does **not** hard-delete bytes. Requires the `delete` scope |
 | `probe_design_asset_text_layer` | Best-effort PDF embedded text probe (API feature-flagged) |

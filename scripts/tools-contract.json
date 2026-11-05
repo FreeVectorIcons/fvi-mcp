@@ -6,8 +6,7 @@
       "description": "Return metadata-first context for the configured FreeVectorIcons design collection. Adapts instructions for brand vs records (collectionPurpose) and exposes transcription status on documents.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -19,8 +18,7 @@
       "description": "List metadata for assets in the configured design collection.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -41,8 +39,7 @@
         },
         "required": [
           "query"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -63,8 +60,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -85,8 +81,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -107,8 +102,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -120,8 +114,7 @@
       "description": "List the public community icon packs with license, icon count, and the agentGuide pointer (AGENTS.md and manifest.json URLs) for each pack.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -142,8 +135,7 @@
         },
         "required": [
           "slug"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -172,8 +164,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -182,7 +173,7 @@
     {
       "name": "create_design_asset_upload",
       "title": "Create Design Asset Upload",
-      "description": "Create a signed upload target and collection asset record for parking a DRL/FVI design asset.",
+      "description": "Create a collection asset record and an upload URL, for files too large to send inline. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_design_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user. Then call complete_design_asset_upload with the returned versionId as uploadId.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -248,8 +239,7 @@
           "name",
           "contentType",
           "sizeBytes"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -337,8 +327,7 @@
         "required": [
           "name",
           "contentType"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -430,8 +419,7 @@
         "required": [
           "assetId",
           "contentType"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -459,8 +447,7 @@
         },
         "required": [
           "content"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -481,8 +468,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -554,8 +540,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -663,8 +648,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -685,8 +669,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -707,8 +690,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -732,8 +714,7 @@
           "dryRun": {
             "type": "boolean"
           }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        }
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -759,8 +740,7 @@
         },
         "required": [
           "purpose"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -769,7 +749,7 @@
     {
       "name": "create_design_asset_version_upload",
       "title": "Create Design Asset Version Upload",
-      "description": "Start a new version of an existing asset with a signed upload. Call complete_design_asset_upload after the bytes are uploaded. The version stays hidden until then.",
+      "description": "Start a new version of an existing asset with an upload URL. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_design_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user. Then call complete_design_asset_upload with the returned uploadId. The version stays hidden until then.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -815,8 +795,7 @@
           "assetId",
           "contentType",
           "sizeBytes"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -836,8 +815,28 @@
         },
         "required": [
           "uploadId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "refresh_design_asset_upload",
+      "title": "Refresh Design Asset Upload",
+      "description": "Get a fresh upload URL for a pending upload whose URL expired. The previous URL stops working. Upload the original bytes; never substitute a smaller file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The uploadId (or versionId) returned when the upload was created."
+          }
+        },
+        "required": [
+          "uploadId"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -866,8 +865,7 @@
         "required": [
           "assetId",
           "version"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -892,8 +890,7 @@
         },
         "required": [
           "assetIds"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -913,8 +910,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -928,8 +924,7 @@
       "description": "Return metadata-first context for the configured FreeVectorIcons design collection. Adapts instructions for brand vs records (collectionPurpose) and exposes transcription status on documents.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -941,8 +936,7 @@
       "description": "List metadata for assets in the configured design collection.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -963,8 +957,7 @@
         },
         "required": [
           "query"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -985,8 +978,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1007,8 +999,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1029,8 +1020,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1042,8 +1032,7 @@
       "description": "List the public community icon packs with license, icon count, and the agentGuide pointer (AGENTS.md and manifest.json URLs) for each pack.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        "properties": {}
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1064,8 +1053,7 @@
         },
         "required": [
           "slug"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1094,8 +1082,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1120,8 +1107,7 @@
         },
         "required": [
           "assetIds"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1141,8 +1127,7 @@
         },
         "required": [
           "assetId"
-        ],
-        "$schema": "http://json-schema.org/draft-07/schema#"
+        ]
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1166,6 +1151,7 @@
     "update_design_collection_purpose",
     "create_design_asset_version_upload",
     "complete_design_asset_upload",
+    "refresh_design_asset_upload",
     "revert_design_asset_to_version",
     "get_design_asset_download_urls",
     "list_design_asset_versions"
@@ -1191,6 +1177,7 @@
     "update_design_collection_purpose",
     "create_design_asset_version_upload",
     "complete_design_asset_upload",
+    "refresh_design_asset_upload",
     "revert_design_asset_to_version",
     "get_design_asset_download_urls",
     "list_design_asset_versions"

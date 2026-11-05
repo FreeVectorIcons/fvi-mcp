@@ -28,6 +28,7 @@ function validate() {
   if (!dist.env.some((v) => v.name === "FVI_TOKEN" && v.required && v.secret)) problems.push("FVI_TOKEN must be declared required and secret");
   if (!existsSync(join(packageRoot, dist.logo))) problems.push(`logo ${dist.logo} is missing`);
   if (!existsSync(join(packageRoot, "skills", dist.skill, "SKILL.md"))) problems.push(`skills/${dist.skill}/SKILL.md is missing`);
+  if (!dist.hostedMcpUrl || !/^https:\/\/\S+$/.test(dist.hostedMcpUrl)) problems.push("hostedMcpUrl must be an https URL");
   if (problems.length > 0) {
     console.error(`distribution.json is invalid:\n- ${problems.join("\n- ")}`);
     process.exit(1);
@@ -80,8 +81,8 @@ function cursorMcp() {
   };
 }
 
-// Antigravity and Gemini CLI variables have no defaults, so only the token is
-// prompted for; the package defaults cover the API URL and read-only mode.
+// Gemini CLI still uses the local stdio package and prompts only for the token.
+// Antigravity uses the hosted remote (see antigravityMcp) and signs in with OAuth.
 function antigravityPlugin() {
   return {
     $schema: ANTIGRAVITY_SCHEMA,
@@ -100,15 +101,12 @@ function antigravityPlugin() {
 }
 
 function antigravityMcp() {
+  // Hosted Streamable HTTP. Antigravity negotiates OAuth (DCR) on connect;
+  // no collection token is prompted for the plugin install.
   return {
     mcpServers: {
       [dist.serverKey]: {
-        command: "npx",
-        args: ["-y", packageSpec],
-        env: { [token.name]: `\${${token.name}}` },
-        variables: [
-          { name: token.name, title: token.title, description: token.description, link: dist.tokenLink },
-        ],
+        serverUrl: dist.hostedMcpUrl,
       },
     },
   };
@@ -141,6 +139,7 @@ This extension connects Gemini CLI to one ${dist.displayName} design collection 
 - Use its tools when the user needs icons, logos, brand assets or the project's design rules, or wants a deliverable saved to their collection. Do not use them for unrelated tasks.
 - Call \`get_design_collection_context\` first and follow the collection's strategy brief and DESIGN.md before choosing or generating assets.
 - Prefer assets already in the user's collection over drawing new SVG.
+- If tools from FreeVectorIcons are missing, ask the user to enable the extension / MCP server — do not say FreeVectorIcons has no integration.
 - Say what you are about to save before calling a write tool such as \`park_design_asset\` or \`create_design_asset_version\`.
 - Never print, echo or write \`${token.name}\` anywhere. On \`TOKEN_MISSING\`, \`TOKEN_MALFORMED\` or \`TOKEN_INVALID\`, ask the user to run \`gemini extensions config ${dist.pluginName}\` with a fresh token from Integrations → Setup MCP.
 
@@ -173,6 +172,12 @@ function registryServer() {
           ...(v.default !== undefined ? { default: v.default } : {}),
           ...(v.choices ? { choices: v.choices } : {}),
         })),
+      },
+    ],
+    remotes: [
+      {
+        type: "streamable-http",
+        url: dist.hostedMcpUrl,
       },
     ],
   };

@@ -2,10 +2,13 @@
   "mcpServers": {
     "freevectoricons": {
       "command": "npx",
-      "args": ["-y", "@freevectoricons/mcp"],
+      "args": [
+        "-y",
+        "@freevectoricons/mcp@0.3.0-beta.3"
+      ],
       "env": {
-        "FVI_API_URL": "${FVI_API_URL}",
         "FVI_TOKEN": "${FVI_TOKEN}",
+        "FVI_API_URL": "${FVI_API_URL}",
         "FVI_READ_ONLY": "${FVI_READ_ONLY}"
       }
     }
