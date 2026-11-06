@@ -27,11 +27,11 @@ Tokens are minted at freevectoricons.com → collection → Integrations → Set
 
 ## Recommended flow
 
-1. Call `get_design_collection_context` first. Read the strategy brief and DESIGN.md before choosing or generating any asset, and follow them. If `designSystem.selection` is not `pinned`, ask before pinning one with `set_collection_design_md`.
-2. Prefer assets already in the user's collection over drawing new SVG or using the public catalogue. Use `search_design_collection_assets` or `list_design_collection_assets` before downloading bytes.
-3. Use `get_design_asset_content` for SVG and Markdown. Use download URLs for PDFs and large binaries; for several files, `get_design_asset_download_urls` takes up to 50 per call.
+1. Call `get_collection_context` first. Read the strategy brief and DESIGN.md before choosing or generating any asset, and follow them. If `designSystem.selection` is not `pinned`, ask before pinning one with `set_collection_design_md`.
+2. Prefer assets already in the user's collection over drawing new SVG or using the public catalogue. Use `search_collection_assets` or `list_collection_assets` before downloading bytes.
+3. Use `get_asset_content` for SVG and Markdown. Use download URLs for PDFs and large binaries; for several files, `get_asset_download_urls` takes up to 50 per call.
 4. If the collection has nothing suitable, `list_community_packs` and `get_community_pack_guide` show public packs with their licence and attribution rules. Follow the pack's guide.
-5. Write back with `park_design_asset` or `create_design_asset_version` only when the user wants the collection updated. Say what you are about to save first. Use `list_design_asset_versions` and `revert_design_asset_to_version` to undo; history is never deleted.
+5. Write back with `park_asset` or `create_asset_version` only when the user wants the collection updated. Say what you are about to save first. Use `list_asset_versions` and `revert_asset_to_version` to undo; history is never deleted.
 
 ## Errors
 

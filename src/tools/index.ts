@@ -1,4 +1,5 @@
 export { TOOL_DEFINITIONS } from "./definitions.js";
+export { LEGACY_TOOL_NAMES, acceptLegacyToolNames, canonicalToolName, canonicalizeToolCalls } from "./legacy-names.js";
 export { registerTools, type RegisteredToolEntry } from "./register.js";
 export type {
   FviApiClient,

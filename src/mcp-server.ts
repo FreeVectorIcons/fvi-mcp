@@ -6,7 +6,14 @@ import { fviDelete, fviGet, fviPatch, fviPost, fviPut, uploadBody } from "./http
 import { readOptInUploadFile } from "./local-files.js";
 import { logger } from "./logger.js";
 import { classifyFviToken } from "./token-shape.js";
-import { TOOL_DEFINITIONS, registerTools, type RegisteredToolEntry, type ToolHost } from "./tools/index.js";
+import {
+  TOOL_DEFINITIONS,
+  acceptLegacyToolNames,
+  canonicalToolName,
+  registerTools,
+  type RegisteredToolEntry,
+  type ToolHost,
+} from "./tools/index.js";
 
 const tokenProblem = classifyFviToken(config.token, config.skipTokenCheck);
 if (tokenProblem) {
@@ -77,7 +84,7 @@ async function applyAccessGates(tools: RegisteredToolEntry[]): Promise<void> {
   }
   const scopes = Array.isArray(whoami?.scopes) ? whoami.scopes : null;
   const capabilities = whoami?.capabilities ?? null;
-  const allow = new Set(config.toolAllowlist);
+  const allow = new Set(config.toolAllowlist.map(canonicalToolName));
   for (const { definition, tool } of tools) {
     if (config.readOnly && definition.scope !== "read") tool.disable();
     if (scopes && !scopes.includes(definition.scope)) tool.disable();
@@ -107,3 +114,7 @@ await applyAccessGates(tools);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
+
+acceptLegacyToolNames(transport, (legacyName) => {
+  logger.warn("tool.legacy_name", { name: legacyName, canonical: canonicalToolName(legacyName) });
+});
