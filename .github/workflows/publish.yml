@@ -151,8 +151,22 @@ jobs:
           fi
           [ "${fail}" = 0 ] || exit 1
           # The registry validates that the npm package exists and carries mcpName.
-          NPM_MCP_NAME="$(npm view "${PKG_NAME}@${PKG_VERSION}" mcpName 2>/dev/null || true)"
-          [ "${NPM_MCP_NAME}" = "${MCP_NAME}" ] || { echo "::error::${PKG_NAME}@${PKG_VERSION} not on npm with mcpName ${MCP_NAME} (got '${NPM_MCP_NAME}')"; exit 1; }
+          # npm may take a few minutes to make a just-published version queryable.
+          NPM_MCP_NAME=""
+          attempts=12
+          interval=15
+          for attempt in $(seq 1 "${attempts}"); do
+            NPM_MCP_NAME="$(npm view "${PKG_NAME}@${PKG_VERSION}" mcpName 2>/dev/null || true)"
+            if [ "${NPM_MCP_NAME}" = "${MCP_NAME}" ]; then
+              echo "npm lists ${PKG_NAME}@${PKG_VERSION} with mcpName ${MCP_NAME} (attempt ${attempt}/${attempts})"
+              break
+            fi
+            if [ "${attempt}" -lt "${attempts}" ]; then
+              echo "npm does not yet list ${PKG_NAME}@${PKG_VERSION} with mcpName ${MCP_NAME} (got '${NPM_MCP_NAME}'); retrying in ${interval}s (${attempt}/${attempts})"
+              sleep "${interval}"
+            fi
+          done
+          [ "${NPM_MCP_NAME}" = "${MCP_NAME}" ] || { echo "::error::${PKG_NAME}@${PKG_VERSION} not on npm with mcpName ${MCP_NAME} (got '${NPM_MCP_NAME}') after ${attempts} attempts"; exit 1; }
           echo "OK: ${SRV_NAME}@${SRV_VERSION} -> ${PKG_NAME}@${PKG_VERSION}"
 
       - name: Install cosign
