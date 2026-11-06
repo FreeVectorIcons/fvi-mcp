@@ -1,13 +1,13 @@
 {
   "name": "freevectoricons",
-  "version": "0.3.0-beta.2",
+  "version": "0.3.0-beta.3",
   "description": "Connect your agent to a FreeVectorIcons design collection: read the brief and DESIGN.md, search and fetch icons and brand assets, and save work back as versions.",
   "mcpServers": {
     "freevectoricons": {
       "command": "npx",
       "args": [
         "-y",
-        "@freevectoricons/mcp@0.3.0-beta.2"
+        "@freevectoricons/mcp@0.3.0-beta.3"
       ],
       "env": {
         "FVI_TOKEN": "${FVI_TOKEN}"

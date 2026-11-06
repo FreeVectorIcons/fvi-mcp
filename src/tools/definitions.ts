@@ -23,6 +23,9 @@ const uploadContentTypes = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ] as const;
 
+const UPLOAD_URL_GUIDANCE =
+  "PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user.";
+
 const BATCH_DOWNLOAD_LIMIT = 50;
 
 function asTextContent(payload: JsonValue) {
@@ -89,25 +92,25 @@ function withDrlMetadata(input: {
 /** Every MCP tool, in listing order. Shared by the local stdio package and the hosted endpoint. */
 export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   defineTool({
-    name: "get_design_collection_context",
+    name: "get_collection_context",
     scope: "read",
     title: "Get Design Collection Context",
     description: "Return metadata-first context for the configured FreeVectorIcons design collection. Adapts instructions for brand vs records (collectionPurpose) and exposes transcription status on documents.",
     inputSchema: {},
-    handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/context"), "get_design_collection_context") as JsonValue),
+    handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/context"), "get_collection_context") as JsonValue),
   }),
 
   defineTool({
-    name: "list_design_collection_assets",
+    name: "list_collection_assets",
     scope: "read",
     title: "List Design Collection Assets",
     description: "List metadata for assets in the configured design collection.",
     inputSchema: {},
-    handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/assets"), "list_design_collection_assets") as JsonValue),
+    handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/assets"), "list_collection_assets") as JsonValue),
   }),
 
   defineTool({
-    name: "search_design_collection_assets",
+    name: "search_collection_assets",
     scope: "read",
     title: "Search Design Collection Assets",
     description: "Search design collection asset metadata by name, type, category, style, or tag.",
@@ -118,13 +121,13 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       const validatedQuery = validateSearchQuery(query, limits);
       const params = new URLSearchParams({ query: validatedQuery });
       return asTextContent(
-        await api.get(`${await api.collectionPath("/assets")}?${params.toString()}`, "search_design_collection_assets") as JsonValue,
+        await api.get(`${await api.collectionPath("/assets")}?${params.toString()}`, "search_collection_assets") as JsonValue,
       );
     },
   }),
 
   defineTool({
-    name: "get_design_asset",
+    name: "get_asset",
     scope: "read",
     title: "Get Design Asset",
     description: "Get metadata for one asset by asset id or collection item id.",
@@ -134,13 +137,13 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     handler: async ({ api, limits }, { assetId }) => {
       const validatedAssetId = validateAssetId(assetId, limits);
       return asTextContent(
-        await api.get(await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`), "get_design_asset") as JsonValue,
+        await api.get(await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}`), "get_asset") as JsonValue,
       );
     },
   }),
 
   defineTool({
-    name: "get_design_asset_download_url",
+    name: "get_asset_download_url",
     scope: "read",
     title: "Get Design Asset Download URL",
     description: "Get a short-lived download URL for an uploaded design asset.",
@@ -152,14 +155,14 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       return asTextContent(
         await api.get(
           await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/download-url`),
-          "get_design_asset_download_url",
+          "get_asset_download_url",
         ) as JsonValue,
       );
     },
   }),
 
   defineTool({
-    name: "get_design_asset_content",
+    name: "get_asset_content",
     scope: "read",
     title: "Get Design Asset Content",
     description: "Get inline text content for safe design assets such as catalog SVGs, uploaded SVGs, and Markdown files.",
@@ -171,7 +174,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       return asTextContent(
         await api.get(
           await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/content`),
-          "get_design_asset_content",
+          "get_asset_content",
         ) as JsonValue,
       );
     },
@@ -200,7 +203,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   }),
 
   defineTool({
-    name: "get_design_asset_spreadsheet_preview",
+    name: "get_asset_spreadsheet_preview",
     scope: "read",
     group: "recordsData",
     title: "Get Design Asset Spreadsheet Preview",
@@ -216,17 +219,17 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       return asTextContent(
         await api.get(
           await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/spreadsheet-preview${query}`),
-          "get_design_asset_spreadsheet_preview",
+          "get_asset_spreadsheet_preview",
         ) as JsonValue,
       );
     },
   }),
 
   defineTool({
-    name: "create_design_asset_upload",
+    name: "create_asset_upload",
     scope: "write:assets",
     title: "Create Design Asset Upload",
-    description: "Create a signed upload target and collection asset record for parking a DRL/FVI design asset.",
+    description: `Create a collection asset record and an upload URL, for files too large to send inline. ${UPLOAD_URL_GUIDANCE} Then call complete_asset_upload with the returned versionId as uploadId.`,
     inputSchema: {
       name: z.string().min(1).describe("File name for the asset."),
       contentType: z.enum(uploadContentTypes).describe("MIME type for the uploaded asset."),
@@ -246,13 +249,13 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         sizeBytes,
         ...(checksumSha256 ? { checksumSha256 } : {}),
         metadata: withDrlMetadata({ metadata: metadata as JsonRecord | undefined, drlProjectId, drlAssetType, documentType, tags }),
-      }, "create_design_asset_upload");
+      }, "create_asset_upload");
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "park_design_asset",
+    name: "park_asset",
     scope: "write:assets",
     title: "Park Design Asset",
     description: "Upload inline text or base64 content directly into the configured FVI collection for DRL handoff.",
@@ -295,11 +298,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           documentType: input.documentType,
           tags: input.tags,
         }),
-      }, "park_design_asset");
+      }, "park_asset");
       if (uploadResponse.dryRun || !uploadResponse.upload) return asTextContent(uploadResponse as JsonValue);
-      await api.upload(uploadResponse.upload, prepared.body, "park_design_asset");
+      await api.upload(uploadResponse.upload, prepared.body, "park_asset");
       const completed = uploadResponse.versionId
-        ? await api.post<JsonValue>(await api.collectionPath(`/uploads/${encodeURIComponent(uploadResponse.versionId)}/complete`), {}, "complete_design_asset_upload")
+        ? await api.post<JsonValue>(await api.collectionPath(`/uploads/${encodeURIComponent(uploadResponse.versionId)}/complete`), {}, "complete_asset_upload")
         : null;
       return asTextContent({
         asset: uploadResponse.asset ?? null,
@@ -311,7 +314,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   }),
 
   defineTool({
-    name: "create_design_asset_version",
+    name: "create_asset_version",
     scope: "write:assets",
     title: "Create Design Asset Version",
     description: "Upload inline text or base64 content as a new version of an existing uploaded design asset.",
@@ -356,11 +359,11 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           documentType: input.documentType,
           tags: input.tags,
         }),
-      }, "create_design_asset_version");
+      }, "create_asset_version");
       if (versionResponse.dryRun || !versionResponse.upload) return asTextContent(versionResponse as JsonValue);
-      await api.upload(versionResponse.upload, prepared.body, "create_design_asset_version");
+      await api.upload(versionResponse.upload, prepared.body, "create_asset_version");
       const completed = versionResponse.versionId
-        ? await api.post<JsonValue>(await api.collectionPath(`/uploads/${encodeURIComponent(versionResponse.versionId)}/complete`), {}, "complete_design_asset_upload")
+        ? await api.post<JsonValue>(await api.collectionPath(`/uploads/${encodeURIComponent(versionResponse.versionId)}/complete`), {}, "complete_asset_upload")
         : null;
       return asTextContent({
         asset: versionResponse.asset ?? null,
@@ -372,7 +375,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   }),
 
   defineTool({
-    name: "update_design_collection_strategy_brief",
+    name: "set_collection_strategy_brief",
     scope: "write:collection",
     group: "records",
     title: "Update Design Collection Strategy Brief",
@@ -389,14 +392,14 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           content,
           ...(mode ? { mode } : {}),
         },
-        "update_design_collection_strategy_brief",
+        "set_collection_strategy_brief",
       );
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "promote_design_asset_to_strategy_brief",
+    name: "promote_asset_to_strategy_brief",
     scope: "write:collection",
     group: "records",
     title: "Promote Design Asset To Strategy Brief",
@@ -410,14 +413,14 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       const response = await api.post<JsonValue>(
         await api.collectionPath("/strategy-brief/promote"),
         { assetId: validatedAssetId },
-        "promote_design_asset_to_strategy_brief",
+        "promote_asset_to_strategy_brief",
       );
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "update_design_asset_transcription_status",
+    name: "set_asset_transcription_status",
     scope: "write:records",
     group: "recordsData",
     title: "Update Design Asset Transcription Status",
@@ -452,18 +455,18 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           ...(textLayer ? { textLayer } : {}),
           ...(transcription ? { transcription } : {}),
         },
-        "update_design_asset_transcription_status",
+        "set_asset_transcription_status",
       );
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "update_design_asset",
+    name: "update_asset",
     scope: "write:assets",
     title: "Update Design Asset",
     description:
-      "Metadata-only PATCH for an uploaded collection asset: name, tags, documentType, drlProjectId, drlAssetType. Does not replace file bytes — use create_design_asset_version for content changes.",
+      "Metadata-only PATCH for an uploaded collection asset: name, tags, documentType, drlProjectId, drlAssetType. Does not replace file bytes — use create_asset_version for content changes.",
     inputSchema: {
       assetId: z.string().min(1).describe("Asset id or collection item id."),
       name: z.string().min(1).optional().describe("New display file name. The extension cannot change."),
@@ -499,14 +502,14 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           ...(links !== undefined ? { links } : {}),
           ...(dryRun ? { dryRun: true } : {}),
         },
-        "update_design_asset",
+        "update_asset",
       );
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "delete_design_collection_asset",
+    name: "delete_collection_asset",
     scope: "delete",
     group: "records",
     title: "Delete Design Collection Asset (Soft Unlink)",
@@ -522,14 +525,14 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       const validatedAssetId = validateAssetId(assetId, limits);
       const response = await api.delete<JsonValue>(
         await api.collectionPath(`/items/${encodeURIComponent(validatedAssetId)}`),
-        "delete_design_collection_asset",
+        "delete_collection_asset",
       );
       return asTextContent(response);
     },
   }),
 
   defineTool({
-    name: "probe_design_asset_text_layer",
+    name: "probe_asset_text_layer",
     scope: "write:records",
     group: "records",
     title: "Probe Design Asset Text Layer",
@@ -543,7 +546,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
       const response = await api.post<JsonValue>(
         await api.collectionPath(`/assets/${encodeURIComponent(validatedAssetId)}/text-layer-probe`),
         {},
-        "probe_design_asset_text_layer",
+        "probe_asset_text_layer",
       );
       return asTextContent(response);
     },
@@ -568,7 +571,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   }),
 
   defineTool({
-    name: "update_design_collection_purpose",
+    name: "update_collection_purpose",
     scope: "write:collection",
     capability: "purpose",
     title: "Update Design Collection Purpose",
@@ -580,15 +583,15 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     handler: async ({ api }, { purpose, dryRun }) => asTextContent(await api.put(await api.collectionPath("/purpose"), {
       purpose,
       ...(dryRun ? { dryRun: true } : {}),
-    }, "update_design_collection_purpose") as JsonValue),
+    }, "update_collection_purpose") as JsonValue),
   }),
 
   defineTool({
-    name: "create_design_asset_version_upload",
+    name: "create_asset_version_upload",
     scope: "write:assets",
     capability: "versionUpload",
     title: "Create Design Asset Version Upload",
-    description: "Start a new version of an existing asset with a signed upload. Call complete_design_asset_upload after the bytes are uploaded. The version stays hidden until then.",
+    description: `Start a new version of an existing asset with an upload URL. ${UPLOAD_URL_GUIDANCE} Then call complete_asset_upload with the returned uploadId. The version stays hidden until then.`,
     inputSchema: {
       assetId: z.string().min(1),
       name: z.string().optional(),
@@ -614,13 +617,13 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
           sizeBytes: bytes.byteLength,
           checksumSha256,
           ...(input.dryRun ? { dryRun: true } : {}),
-        }, "create_design_asset_version_upload");
+        }, "create_asset_version_upload");
         if (input.dryRun || !started.upload) return asTextContent(started as JsonValue);
-        await api.upload(started.upload, bytes, "create_design_asset_version_upload");
+        await api.upload(started.upload, bytes, "create_asset_version_upload");
         const completed = await api.post(
           await api.collectionPath(`/uploads/${encodeURIComponent(started.uploadId)}/complete`),
           {},
-          "complete_design_asset_upload",
+          "complete_asset_upload",
         );
         return asTextContent({ uploadId: started.uploadId, completed } as JsonValue);
       }
@@ -631,12 +634,12 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         sizeBytes: input.sizeBytes,
         ...(input.checksumSha256 ? { checksumSha256: input.checksumSha256 } : {}),
         ...(input.dryRun ? { dryRun: true } : {}),
-      }, "create_design_asset_version_upload") as JsonValue);
+      }, "create_asset_version_upload") as JsonValue);
     },
   }),
 
   defineTool({
-    name: "complete_design_asset_upload",
+    name: "complete_asset_upload",
     scope: "write:assets",
     capability: "versionUpload",
     title: "Complete Design Asset Upload",
@@ -647,12 +650,28 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     handler: async ({ api }, { uploadId }) => asTextContent(await api.post(
       await api.collectionPath(`/uploads/${encodeURIComponent(uploadId)}/complete`),
       {},
-      "complete_design_asset_upload",
+      "complete_asset_upload",
     ) as JsonValue),
   }),
 
   defineTool({
-    name: "revert_design_asset_to_version",
+    name: "refresh_asset_upload",
+    scope: "write:assets",
+    capability: "versionUpload",
+    title: "Refresh Design Asset Upload",
+    description: "Get a fresh upload URL for a pending upload whose URL expired. The previous URL stops working. Upload the original bytes; never substitute a smaller file.",
+    inputSchema: {
+      uploadId: z.string().min(1).describe("The uploadId (or versionId) returned when the upload was created."),
+    },
+    handler: async ({ api }, { uploadId }) => asTextContent(await api.post(
+      await api.collectionPath(`/uploads/${encodeURIComponent(uploadId)}/refresh`),
+      {},
+      "refresh_asset_upload",
+    ) as JsonValue),
+  }),
+
+  defineTool({
+    name: "revert_asset_to_version",
     scope: "write:assets",
     capability: "versionHistory",
     title: "Revert Design Asset To Version",
@@ -665,12 +684,12 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     handler: async ({ api, limits }, { assetId, version, dryRun }) => asTextContent(await api.post(
       await api.collectionPath(`/assets/${encodeURIComponent(validateAssetId(assetId, limits))}/revert`),
       { version, ...(dryRun ? { dryRun: true } : {}) },
-      "revert_design_asset_to_version",
+      "revert_asset_to_version",
     ) as JsonValue),
   }),
 
   defineTool({
-    name: "get_design_asset_download_urls",
+    name: "get_asset_download_urls",
     scope: "read",
     capability: "batchDownloadUrls",
     title: "Get Design Asset Download URLs",
@@ -685,7 +704,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
         const response = await api.post<{ downloads?: Record<string, JsonValue> }>(
           await api.collectionPath("/assets/download-urls"),
           { assetIds: chunk },
-          "get_design_asset_download_urls",
+          "get_asset_download_urls",
         );
         Object.assign(downloads, response.downloads ?? {});
       }
@@ -694,7 +713,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
   }),
 
   defineTool({
-    name: "list_design_asset_versions",
+    name: "list_asset_versions",
     scope: "read",
     capability: "versionHistory",
     title: "List Design Asset Versions",
@@ -702,7 +721,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     inputSchema: { assetId: z.string().min(1) },
     handler: async ({ api, limits }, { assetId }) => asTextContent(await api.get(
       await api.collectionPath(`/assets/${encodeURIComponent(validateAssetId(assetId, limits))}/versions`),
-      "list_design_asset_versions",
+      "list_asset_versions",
     ) as JsonValue),
   }),
 ];
