@@ -6,7 +6,7 @@
   "description": "Connect your agent to a FreeVectorIcons design collection: read the brief and DESIGN.md, search and fetch icons and brand assets, and save work back as versions.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
-    "Read my FreeVectorIcons collection brief and DESIGN.md, then summarise the brand rules",
+    "Connect to my FreeVectorIcons collection and summarise what is in it and what the brand guidelines say",
     "Find icons in my collection for a settings page and add them to this component",
     "Save this SVG to my collection as a new version of the existing logo"
   ],

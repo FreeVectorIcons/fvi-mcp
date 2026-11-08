@@ -32,7 +32,17 @@ if (update) {
   process.exit(0);
 }
 
-const expected = readFileSync(snapshotFile, "utf8");
+// Keep the main snapshot (names, arguments and gating) unchanged. The only
+// intentional wire difference is removal of SDK JSON Schema declarations for
+// Gemini; normalize the saved baseline only so a wire regression still fails.
+function withoutSchemaDeclarations(value) {
+  if (Array.isArray(value)) return value.map(withoutSchemaDeclarations);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => key !== "$schema")
+    .map(([key, child]) => [key, withoutSchemaDeclarations(child)]));
+}
+const expected = `${JSON.stringify(withoutSchemaDeclarations(JSON.parse(readFileSync(snapshotFile, "utf8"))), null, 2)}\n`;
 if (expected !== serialized) {
   const names = (list) => list.map((tool) => tool.name).join(", ");
   console.error("contract failed: tool list or schemas changed.");

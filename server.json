@@ -53,5 +53,11 @@
         }
       ]
     }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.freevectoricons.com/mcp"
+    }
   ]
 }

@@ -70,7 +70,7 @@ Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketpla
 
 > Gemini CLI passed the compatibility tests against the hosted endpoint on 5 Nov 2026. Antigravity is still being tested after the 0.3.0-beta.3 tool rename; until it passes, treat it as a preview and [report issues](https://github.com/FreeVectorIcons/fvi-mcp/issues).
 
-**Antigravity plugin.** This repository is also an Antigravity plugin (`.antigravity-plugin/plugin.json`, `mcp_config.json` and the `skills/` folder). Install it, then turn it on under `/plugin` (CLI) or Settings → Customizations (app) and paste your collection token when asked.
+**Antigravity plugin.** This repository is also an Antigravity plugin (`.antigravity-plugin/plugin.json`, `mcp_config.json` and the `skills/` folder). It uses the hosted Streamable HTTP server at `https://mcp.freevectoricons.com/mcp`. Install or enable it, then **Authenticate** and choose the collection to bind; the hosted server uses OAuth rather than prompting for a collection token.
 
 **Antigravity config block.** Or add this to `~/.gemini/config/mcp_config.json` (all projects) or `.agents/mcp_config.json` (one workspace):
 
@@ -78,15 +78,13 @@ Submit / re-index: [cursor.com/marketplace/publish](https://cursor.com/marketpla
 {
   "mcpServers": {
     "freevectoricons": {
-      "command": "npx",
-      "args": ["-y", "@freevectoricons/mcp"],
-      "env": {
-        "FVI_TOKEN": "<collection-token>"
-      }
+      "serverUrl": "https://mcp.freevectoricons.com/mcp"
     }
   }
 }
 ```
+
+Then open MCP Servers → Manage, click **Authenticate** on `freevectoricons`, and choose the collection to bind. Antigravity compatibility remains unverified; this configuration does not claim a store listing or a completed client test.
 
 **Gemini CLI extension.** Install from this repository and enter your collection token when prompted:
 

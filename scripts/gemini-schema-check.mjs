@@ -2,16 +2,23 @@
 /**
  * Reports tool schemas and names that fall outside what Gemini function
  * declarations accept (the OpenAPI Schema subset of the Gemini API), using the
- * schemas recorded in scripts/tools-contract.json. Hosts that pass full JSON
+ * live schemas returned by the built server against the local fake API. Hosts that pass full JSON
  * Schema through may still work; hosts that convert to the subset may drop or
  * reject these keywords. Pass --strict to exit 1 when anything is reported.
  */
 import { readFileSync } from "node:fs";
+import { startFakeApi } from "./fake-api.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-const contract = JSON.parse(readFileSync(join(packageRoot, "scripts", "tools-contract.json"), "utf8"));
+const api = await startFakeApi();
+let tools;
+try {
+  tools = await api.listTools(join(packageRoot, "dist", "mcp-server.mjs"));
+} finally {
+  api.close();
+}
 const dist = JSON.parse(readFileSync(join(packageRoot, "distribution.json"), "utf8"));
 const strict = process.argv.includes("--strict");
 
@@ -42,7 +49,7 @@ function findUnsupported(node, path, out) {
 
 let findings = 0;
 const keywordCounts = new Map();
-for (const tool of contract.full) {
+for (const tool of tools) {
   const issues = [];
   if (!NAME_PATTERN.test(tool.name)) issues.push(`name "${tool.name}" is not a valid Gemini function name`);
   const paths = [];
@@ -59,11 +66,11 @@ for (const tool of contract.full) {
 }
 
 const antigravityServer = `${dist.pluginName}_${dist.serverKey}`;
-const longest = contract.full.reduce((a, b) => (b.name.length > a.name.length ? b : a));
+const longest = tools.reduce((a, b) => (b.name.length > a.name.length ? b : a));
 const prefixed = `${antigravityServer}__${longest.name}`;
 
 console.log("");
-console.log(`${contract.full.length} tools checked, ${findings} findings outside the Gemini schema subset`);
+console.log(`${tools.length} tools checked, ${findings} findings outside the Gemini schema subset`);
 if (keywordCounts.size > 0) {
   console.log(`by keyword: ${[...keywordCounts].map(([k, n]) => `${k} ${n}`).join(", ")}`);
 }

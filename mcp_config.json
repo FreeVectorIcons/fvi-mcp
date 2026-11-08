@@ -1,22 +1,7 @@
 {
   "mcpServers": {
     "freevectoricons": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@freevectoricons/mcp@0.3.0-beta.3"
-      ],
-      "env": {
-        "FVI_TOKEN": "${FVI_TOKEN}"
-      },
-      "variables": [
-        {
-          "name": "FVI_TOKEN",
-          "title": "Collection token",
-          "description": "Collection-scoped token (fvi_col_…) from FreeVectorIcons → your collection → Integrations → Setup MCP. The collection is derived from this token. Never commit this value.",
-          "link": "https://freevectoricons.com/collections"
-        }
-      ]
+      "serverUrl": "https://mcp.freevectoricons.com/mcp"
     }
   }
 }
