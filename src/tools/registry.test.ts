@@ -168,4 +168,50 @@ function inputKeys(tools: Array<{ name: string; inputSchema: { properties?: Reco
   assert.deepEqual(canonicalizeToolCalls({ method: "tools/call", params: { name: "toString" } }), [], "prototype keys are not aliases");
 }
 
+
+{
+  const names = TOOL_DEFINITIONS.map((definition) => definition.name);
+  assert.equal(names.length, 26);
+  for (const definition of TOOL_DEFINITIONS) {
+    assert.ok(definition.title.trim(), `${definition.name} has a title`);
+    const annotations = definition.annotations;
+    assert.equal(typeof annotations.readOnlyHint, "boolean", `${definition.name} has readOnlyHint`);
+    assert.equal(typeof annotations.destructiveHint, "boolean", `${definition.name} has destructiveHint`);
+    assert.equal(typeof annotations.idempotentHint, "boolean", `${definition.name} has idempotentHint`);
+    assert.equal(typeof annotations.openWorldHint, "boolean", `${definition.name} has openWorldHint`);
+    assert.ok(
+      annotations.readOnlyHint || annotations.destructiveHint === true || annotations.destructiveHint === false,
+      `${definition.name} declares readOnlyHint or destructiveHint`,
+    );
+    if (definition.scope === "read") {
+      assert.equal(annotations.readOnlyHint, true, `${definition.name} is read-only`);
+      assert.equal(annotations.destructiveHint, false, `${definition.name} is not destructive`);
+    } else {
+      assert.equal(annotations.readOnlyHint, false, `${definition.name} is a write`);
+    }
+  }
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "delete_collection_asset")?.annotations.destructiveHint, true);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "create_asset_version")?.annotations.destructiveHint, false);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "park_asset")?.annotations.destructiveHint, false);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "update_asset")?.annotations.destructiveHint, true);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "list_community_packs")?.annotations.openWorldHint, true);
+  assert.equal(TOOL_DEFINITIONS.find((tool) => tool.name === "get_asset")?.annotations.openWorldHint, false);
+}
+
+{
+  const calls: Call[] = [];
+  const client = await connect({ api: fakeApi(calls), limits: DEFAULT_TOOL_LIMITS });
+  const listed = (await client.listTools()).tools;
+  assert.equal(listed.length, TOOL_DEFINITIONS.length);
+  for (const definition of TOOL_DEFINITIONS) {
+    const listedTool = listed.find((tool) => tool.name === definition.name);
+    assert.ok(listedTool, `${definition.name} is listed`);
+    assert.equal(listedTool.title, definition.title);
+    assert.equal(listedTool.annotations?.readOnlyHint, definition.annotations.readOnlyHint, `${definition.name} readOnlyHint is advertised`);
+    assert.equal(listedTool.annotations?.destructiveHint, definition.annotations.destructiveHint, `${definition.name} destructiveHint is advertised`);
+    assert.equal(listedTool.annotations?.idempotentHint, definition.annotations.idempotentHint, `${definition.name} idempotentHint is advertised`);
+    assert.equal(listedTool.annotations?.openWorldHint, definition.annotations.openWorldHint, `${definition.name} openWorldHint is advertised`);
+  }
+}
+
 console.log("fvi-mcp tool registry tests passed");

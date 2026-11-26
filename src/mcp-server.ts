@@ -14,6 +14,7 @@ import {
   type RegisteredToolEntry,
   type ToolHost,
 } from "./tools/index.js";
+import { MCP_SERVER_INSTRUCTIONS } from "./server-info.js";
 
 const tokenProblem = classifyFviToken(config.token, config.skipTokenCheck);
 if (tokenProblem) {
@@ -21,10 +22,13 @@ if (tokenProblem) {
   process.exit(1);
 }
 
-const server = new McpServer({
-  name: "freevectoricons",
-  version: "0.3.0-beta.2",
-});
+const server = new McpServer(
+  {
+    name: "freevectoricons",
+    version: "0.3.0-beta.2",
+  },
+  { instructions: MCP_SERVER_INSTRUCTIONS },
+);
 
 const host: ToolHost = {
   api: {
