@@ -9,6 +9,12 @@
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -21,6 +27,12 @@
         "type": "object",
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -44,6 +56,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -65,6 +83,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -88,6 +112,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -110,6 +140,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -122,6 +158,12 @@
         "type": "object",
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -144,6 +186,12 @@
           "slug"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -175,6 +223,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -182,7 +236,7 @@
     {
       "name": "create_asset_upload",
       "title": "Create Design Asset Upload",
-      "description": "Create a collection asset record and an upload URL, for files too large to send inline. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user. Then call complete_asset_upload with the returned versionId as uploadId.",
+      "description": "Create a collection asset record and an upload URL, for files too large to send inline. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. The URL is valid for 15 minutes; refresh_asset_upload returns a new one. Design files must be uploaded as-is, without recompressing, downscaling, or re-exporting to fit a size limit. The response includes a versionId to use as uploadId when completing the upload with complete_asset_upload.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -250,6 +304,12 @@
           "sizeBytes"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -339,6 +399,12 @@
           "contentType"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -433,6 +499,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -462,6 +534,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -483,6 +561,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -556,6 +640,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -666,6 +756,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -688,6 +784,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -709,6 +811,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -734,6 +842,12 @@
           }
         },
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -762,6 +876,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -769,7 +889,7 @@
     {
       "name": "create_asset_version_upload",
       "title": "Create Design Asset Version Upload",
-      "description": "Start a new version of an existing asset with an upload URL. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user. Then call complete_asset_upload with the returned uploadId. The version stays hidden until then.",
+      "description": "Start a new version of an existing asset with an upload URL. PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. The URL is valid for 15 minutes; refresh_asset_upload returns a new one. Design files must be uploaded as-is, without recompressing, downscaling, or re-exporting to fit a size limit. The version stays hidden until it is completed with complete_asset_upload, using the returned uploadId.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -818,6 +938,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -838,6 +964,12 @@
           "uploadId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -860,6 +992,12 @@
           "uploadId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -891,6 +1029,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -917,6 +1061,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -938,6 +1088,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -953,6 +1109,12 @@
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -965,6 +1127,12 @@
         "type": "object",
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -988,6 +1156,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -1009,6 +1183,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1032,6 +1212,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -1054,6 +1240,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -1066,6 +1258,12 @@
         "type": "object",
         "properties": {},
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1088,6 +1286,12 @@
           "slug"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
       },
       "execution": {
         "taskSupport": "forbidden"
@@ -1119,6 +1323,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -1145,6 +1355,12 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
       "execution": {
         "taskSupport": "forbidden"
       }
@@ -1165,6 +1381,12 @@
           "assetId"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
       },
       "execution": {
         "taskSupport": "forbidden"

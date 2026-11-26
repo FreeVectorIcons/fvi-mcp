@@ -30,6 +30,48 @@ export interface ToolHost {
   readLocalFile?: (filePath: string) => Promise<Buffer>;
 }
 
+/** MCP tool annotations advertised to clients and directory reviewers. */
+export type ToolAnnotations = {
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  openWorldHint: boolean;
+};
+
+export const READ_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
+/** Community catalog reads: first-party, but not confined to one private collection. */
+export const COMMUNITY_READ_ANNOTATIONS: ToolAnnotations = {
+  ...READ_ANNOTATIONS,
+  openWorldHint: true,
+};
+
+export const ADDITIVE_WRITE_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
+export const REPLACE_WRITE_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+
+export const DELETE_ANNOTATIONS: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: false,
+};
+
 export type ToolResult = { content: Array<{ type: "text"; text: string }> };
 
 export interface ToolDefinition<Shape extends z.ZodRawShape = z.ZodRawShape> {
@@ -39,6 +81,7 @@ export interface ToolDefinition<Shape extends z.ZodRawShape = z.ZodRawShape> {
   group?: ToolGroup;
   title: string;
   description: string;
+  annotations: ToolAnnotations;
   inputSchema: Shape;
   localOnlyInputs?: Array<keyof Shape & string>;
   handler: (host: ToolHost, args: z.infer<z.ZodObject<Shape>>) => Promise<ToolResult>;

@@ -6,7 +6,17 @@ import {
   validateUploadSize,
   validateWriteContent,
 } from "../validation.js";
-import { defineTool, type ToolDefinition, type ToolHost, type UploadTarget } from "./types.js";
+import {
+  ADDITIVE_WRITE_ANNOTATIONS,
+  COMMUNITY_READ_ANNOTATIONS,
+  DELETE_ANNOTATIONS,
+  READ_ANNOTATIONS,
+  REPLACE_WRITE_ANNOTATIONS,
+  defineTool,
+  type ToolDefinition,
+  type ToolHost,
+  type UploadTarget,
+} from "./types.js";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 type JsonRecord = { [key: string]: JsonValue };
@@ -24,7 +34,7 @@ const uploadContentTypes = [
 ] as const;
 
 const UPLOAD_URL_GUIDANCE =
-  "PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. Request the URL just before uploading: it is valid for 15 minutes, and refresh_asset_upload issues a new one. Never recompress, downscale or re-export design files to fit a size limit; if an upload fails, tell the user.";
+  "PUT the original file bytes to upload.url from any HTTP client, sending only upload.headers. The URL is valid for 15 minutes; refresh_asset_upload returns a new one. Design files must be uploaded as-is, without recompressing, downscaling, or re-exporting to fit a size limit.";
 
 const BATCH_DOWNLOAD_LIMIT = 50;
 
@@ -95,6 +105,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "get_collection_context",
     scope: "read",
     title: "Get Design Collection Context",
+    annotations: READ_ANNOTATIONS,
     description: "Return metadata-first context for the configured FreeVectorIcons design collection. Adapts instructions for brand vs records (collectionPurpose) and exposes transcription status on documents.",
     inputSchema: {},
     handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/context"), "get_collection_context") as JsonValue),
@@ -104,6 +115,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "list_collection_assets",
     scope: "read",
     title: "List Design Collection Assets",
+    annotations: READ_ANNOTATIONS,
     description: "List metadata for assets in the configured design collection.",
     inputSchema: {},
     handler: async ({ api }) => asTextContent(await api.get(await api.collectionPath("/assets"), "list_collection_assets") as JsonValue),
@@ -113,6 +125,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "search_collection_assets",
     scope: "read",
     title: "Search Design Collection Assets",
+    annotations: READ_ANNOTATIONS,
     description: "Search design collection asset metadata by name, type, category, style, or tag.",
     inputSchema: {
       query: z.string().min(1).describe("Search query for asset metadata."),
@@ -130,6 +143,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "get_asset",
     scope: "read",
     title: "Get Design Asset",
+    annotations: READ_ANNOTATIONS,
     description: "Get metadata for one asset by asset id or collection item id.",
     inputSchema: {
       assetId: z.string().min(1).describe("Asset id or collection item id."),
@@ -146,6 +160,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "get_asset_download_url",
     scope: "read",
     title: "Get Design Asset Download URL",
+    annotations: READ_ANNOTATIONS,
     description: "Get a short-lived download URL for an uploaded design asset.",
     inputSchema: {
       assetId: z.string().min(1).describe("Uploaded asset id or collection item id."),
@@ -165,6 +180,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "get_asset_content",
     scope: "read",
     title: "Get Design Asset Content",
+    annotations: READ_ANNOTATIONS,
     description: "Get inline text content for safe design assets such as catalog SVGs, uploaded SVGs, and Markdown files.",
     inputSchema: {
       assetId: z.string().min(1).describe("Asset id or collection item id."),
@@ -184,6 +200,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "list_community_packs",
     scope: "read",
     title: "List Community Packs",
+    annotations: COMMUNITY_READ_ANNOTATIONS,
     description: "List the public community icon packs with license, icon count, and the agentGuide pointer (AGENTS.md and manifest.json URLs) for each pack.",
     inputSchema: {},
     handler: async ({ api }) => asTextContent(await api.get("/packs/catalog", "list_community_packs") as JsonValue),
@@ -193,6 +210,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "get_community_pack_guide",
     scope: "read",
     title: "Get Community Pack Guide",
+    annotations: COMMUNITY_READ_ANNOTATIONS,
     description: "Return the AGENTS.md for one community pack: generated facts (license, attribution, icon counts, URL patterns) plus the curator's usage guide. Read it before using the pack's icons.",
     inputSchema: {
       slug: z.string().regex(/^[a-z0-9-]+$/).describe("Pack slug, e.g. empowering-fitness."),
@@ -207,6 +225,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "read",
     group: "recordsData",
     title: "Get Design Asset Spreadsheet Preview",
+    annotations: READ_ANNOTATIONS,
     description:
       "Return a size-capped first-sheet CSV or HTML preview for an .xls/.xlsx asset. Never dumps the full workbook — download URL remains primary for complete files.",
     inputSchema: {
@@ -229,7 +248,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "create_asset_upload",
     scope: "write:assets",
     title: "Create Design Asset Upload",
-    description: `Create a collection asset record and an upload URL, for files too large to send inline. ${UPLOAD_URL_GUIDANCE} Then call complete_asset_upload with the returned versionId as uploadId.`,
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
+    description: `Create a collection asset record and an upload URL, for files too large to send inline. ${UPLOAD_URL_GUIDANCE} The response includes a versionId to use as uploadId when completing the upload with complete_asset_upload.`,
     inputSchema: {
       name: z.string().min(1).describe("File name for the asset."),
       contentType: z.enum(uploadContentTypes).describe("MIME type for the uploaded asset."),
@@ -258,6 +278,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "park_asset",
     scope: "write:assets",
     title: "Park Design Asset",
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
     description: "Upload inline text or base64 content directly into the configured FVI collection for DRL handoff.",
     inputSchema: {
       name: z.string().min(1).describe("File name for the asset."),
@@ -317,6 +338,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "create_asset_version",
     scope: "write:assets",
     title: "Create Design Asset Version",
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
     description: "Upload inline text or base64 content as a new version of an existing uploaded design asset.",
     inputSchema: {
       assetId: z.string().min(1).describe("Existing uploaded asset id."),
@@ -379,6 +401,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:collection",
     group: "records",
     title: "Update Design Collection Strategy Brief",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description:
       "Replace collection.metadata.strategyBrief (the native Design Brief → Strategy Brief tab / MCP strategy.brief). Parked STRATEGY_BRIEF.md does NOT fill the native tab unless promoted. Mutates collection metadata and appends a revision.",
     inputSchema: {
@@ -403,6 +426,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:collection",
     group: "records",
     title: "Promote Design Asset To Strategy Brief",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description:
       "Copy an inline Markdown asset into collection.metadata.strategyBrief. Parked STRATEGY_BRIEF.md does NOT fill the native Strategy Brief tab unless promoted with this tool. Does not delete the source asset.",
     inputSchema: {
@@ -424,6 +448,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:records",
     group: "recordsData",
     title: "Update Design Asset Transcription Status",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description:
       "Update textLayer and/or transcription status metadata on a PDF (or other doc) asset. Park Markdown transcriptions as sibling assets and link via transcription.transcriptionAssetId. Does not run OCR.",
     inputSchema: {
@@ -465,6 +490,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     name: "update_asset",
     scope: "write:assets",
     title: "Update Design Asset",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description:
       "Metadata-only PATCH for an uploaded collection asset: name, tags, documentType, drlProjectId, drlAssetType. Does not replace file bytes — use create_asset_version for content changes.",
     inputSchema: {
@@ -513,6 +539,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "delete",
     group: "records",
     title: "Delete Design Collection Asset (Soft Unlink)",
+    annotations: DELETE_ANNOTATIONS,
     description:
       "Soft-unlink a collection item only (same as session DELETE …/items/:itemId). Removes the item from the collection and clears assets.collection_id — does NOT hard-delete storage bytes. Prefer this over discard when decluttering a collection.",
     inputSchema: {
@@ -536,6 +563,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:records",
     group: "records",
     title: "Probe Design Asset Text Layer",
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
     description:
       "Best-effort PDF embedded text-layer probe. Updates textLayer / transcription metadata when FVI_PDF_TEXT_LAYER_PROBE is enabled on the API. Handwritten/scanned quality is NOT guaranteed; failures set transcription.status=failed without deleting the asset. No paid OCR API key required.",
     inputSchema: {
@@ -557,6 +585,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:collection",
     capability: "designMd",
     title: "Set Collection DESIGN.md",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description: "Pin the collection's canonical DESIGN.md from inline Markdown or an existing Markdown asset. Lint does not block the save.",
     inputSchema: {
       content: z.string().optional().describe("Inline Markdown. Provide this or assetId."),
@@ -575,6 +604,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:collection",
     capability: "purpose",
     title: "Update Design Collection Purpose",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description: "Set collection purpose to brand or records.",
     inputSchema: {
       purpose: z.enum(["brand", "records"]),
@@ -591,7 +621,8 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:assets",
     capability: "versionUpload",
     title: "Create Design Asset Version Upload",
-    description: `Start a new version of an existing asset with an upload URL. ${UPLOAD_URL_GUIDANCE} Then call complete_asset_upload with the returned uploadId. The version stays hidden until then.`,
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
+    description: `Start a new version of an existing asset with an upload URL. ${UPLOAD_URL_GUIDANCE} The version stays hidden until it is completed with complete_asset_upload, using the returned uploadId.`,
     inputSchema: {
       assetId: z.string().min(1),
       name: z.string().optional(),
@@ -643,6 +674,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:assets",
     capability: "versionUpload",
     title: "Complete Design Asset Upload",
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
     description: "Verify size and checksum, then make a pending version current.",
     inputSchema: {
       uploadId: z.string().min(1),
@@ -659,6 +691,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:assets",
     capability: "versionUpload",
     title: "Refresh Design Asset Upload",
+    annotations: ADDITIVE_WRITE_ANNOTATIONS,
     description: "Get a fresh upload URL for a pending upload whose URL expired. The previous URL stops working. Upload the original bytes; never substitute a smaller file.",
     inputSchema: {
       uploadId: z.string().min(1).describe("The uploadId (or versionId) returned when the upload was created."),
@@ -675,6 +708,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "write:assets",
     capability: "versionHistory",
     title: "Revert Design Asset To Version",
+    annotations: REPLACE_WRITE_ANNOTATIONS,
     description: "Make an earlier version current by copying it into a new version. History is not deleted.",
     inputSchema: {
       assetId: z.string().min(1),
@@ -693,6 +727,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "read",
     capability: "batchDownloadUrls",
     title: "Get Design Asset Download URLs",
+    annotations: READ_ANNOTATIONS,
     description: "Short-lived download URLs for many assets. Lists over 50 ids are split automatically. One bad id does not fail the batch.",
     inputSchema: {
       assetIds: z.array(z.string().min(1)).min(1).describe("Asset ids or collection item ids."),
@@ -717,6 +752,7 @@ export const TOOL_DEFINITIONS: readonly ToolDefinition[] = [
     scope: "read",
     capability: "versionHistory",
     title: "List Design Asset Versions",
+    annotations: READ_ANNOTATIONS,
     description: "Version history for an uploaded asset: number, name, size, verified hash, and source.",
     inputSchema: { assetId: z.string().min(1) },
     handler: async ({ api, limits }, { assetId }) => asTextContent(await api.get(

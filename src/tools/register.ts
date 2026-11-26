@@ -31,6 +31,7 @@ export function registerTools(
         title: definition.title,
         description: definition.description,
         inputSchema: hostInputSchema(definition, host),
+        annotations: definition.annotations,
       } as never,
       ((args: Record<string, unknown>) => definition.handler(host, args as never)) as never,
     );
